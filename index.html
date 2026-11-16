@@ -11,19 +11,19 @@
 /* Layout: the reel owns the whole screen; a title block floats top-left and one
    panel (right column on desktop, bottom sheet on phones) holds detail, parts, view controls. */
 :root {
-  --stage-a: #eef3f3;
-  --stage-b: #a9b9b8;
-  --surface: rgba(249, 252, 250, .88);
-  --surface-solid: #f9fcfa;
-  --ink: #10201c;
-  --muted: #4d615a;
-  --line: rgba(16, 32, 28, .15);
+  --stage-a: #fafbfc;
+  --stage-b: #c3c8cf;
+  --surface: rgba(251, 252, 253, .9);
+  --surface-solid: #fbfcfd;
+  --ink: #14181d;
+  --muted: #535b66;
+  --line: rgba(20, 24, 29, .15);
   --accent: #087f78;
   --accent-ink: #ffffff;
   --accent-soft: rgba(8, 127, 120, .12);
-  --pin-bg: #10201c;
-  --halo: #eef3f0;
-  --pin-ink: #f1f5f3;
+  --pin-bg: #14181d;
+  --halo: #f4f5f7;
+  --pin-ink: #fafbfc;
   --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --font-body: "Barlow", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --gutter-l: max(16px, env(safe-area-inset-left, 0px));
@@ -31,20 +31,20 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --stage-a: #34474a; --stage-b: #090f10;
-    --surface: rgba(15, 23, 21, .84); --surface-solid: #0f1715;
-    --ink: #e7f0ec; --muted: #9fb2ab; --line: rgba(231, 240, 236, .16);
+    --stage-a: #4a5059; --stage-b: #0c0e11;
+    --surface: rgba(18, 21, 26, .86); --surface-solid: #12151a;
+    --ink: #eceff2; --muted: #a3acb7; --line: rgba(236, 239, 242, .16);
     --accent: #2ccfc2; --accent-ink: #04211f; --accent-soft: rgba(44, 207, 194, .14);
-    --pin-bg: #e7f0ec; --pin-ink: #0f1715; --halo: #0a100f;
+    --pin-bg: #eceff2; --pin-ink: #12151a; --halo: #0c0e11;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --stage-a: #34474a; --stage-b: #090f10;
-  --surface: rgba(15, 23, 21, .84); --surface-solid: #0f1715;
-  --ink: #e7f0ec; --muted: #9fb2ab; --line: rgba(231, 240, 236, .16);
+  --stage-a: #4a5059; --stage-b: #0c0e11;
+  --surface: rgba(18, 21, 26, .86); --surface-solid: #12151a;
+  --ink: #eceff2; --muted: #a3acb7; --line: rgba(236, 239, 242, .16);
   --accent: #2ccfc2; --accent-ink: #04211f; --accent-soft: rgba(44, 207, 194, .14);
-  --pin-bg: #e7f0ec; --pin-ink: #0f1715; --halo: #0a100f;
+  --pin-bg: #eceff2; --pin-ink: #12151a; --halo: #0c0e11;
   color-scheme: dark;
 }
 
@@ -65,7 +65,7 @@ button, input { font: inherit; color: inherit; }
 
 .app {
   position: fixed; inset: 0;
-  background: radial-gradient(ellipse 75% 70% at 42% 45%, var(--stage-a), var(--stage-b));
+  background: radial-gradient(ellipse 80% 75% at 40% 42%, var(--stage-a), var(--stage-b));
   overflow: hidden;
 }
 #stage { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
@@ -110,6 +110,13 @@ h1 small { display: block; font-size: .55em; font-weight: 500; letter-spacing: .
 .pin:hover { scale: 1.2; }
 .pin.is-occluded { opacity: 0; pointer-events: none; }
 .pin.is-selected { background: var(--accent); color: var(--accent-ink); border-color: var(--accent-ink); scale: 1.25; opacity: 1; pointer-events: auto; }
+.scale {
+  position: absolute; left: var(--gutter-l); bottom: 18px; pointer-events: none;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+  text-shadow: 0 0 6px var(--halo), 0 0 12px var(--halo);
+}
+.scale i { display: block; height: 7px; border: 1.5px solid var(--ink); border-top: 0; }
+.scale b { font: 600 12px/1 var(--font-display); letter-spacing: .08em; font-variant-numeric: tabular-nums; }
 .tip {
   position: absolute; left: 0; top: 0; pointer-events: none;
   background: var(--pin-bg); color: var(--pin-ink);
@@ -197,6 +204,7 @@ h1 small { display: block; font-size: .55em; font-weight: 500; letter-spacing: .
   <canvas id="stage" aria-label="Interactive 3D model of the reel. Use the parts list to move the camera to a component."></canvas>
   <div class="pins" id="pins"></div>
   <div class="tip" id="tip" hidden></div>
+  <div class="scale" id="scale" aria-hidden="true"><i></i><b>10 mm</b></div>
 
   <header class="title">
     <p class="eyebrow">Daiwa &middot; eging spinning reel</p>
@@ -224,7 +232,7 @@ h1 small { display: block; font-size: .55em; font-weight: 500; letter-spacing: .
         <label for="explode">Explode</label>
         <input id="explode" type="range" min="0" max="100" value="0">
       </div>
-      <p class="note">Stylised model built from primitives, not Daiwa CAD. Part numbers are this page’s own, not Daiwa’s. Not affiliated with Daiwa.</p>
+      <p class="note">Modelled in code, not Daiwa CAD. Sizes are scaled from the product photo and are approximate. Part numbers are this page’s own. Not affiliated with Daiwa.</p>
     </div>
   </aside>
 </div>
@@ -262,93 +270,181 @@ try {
 }
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.toneMapping = T.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = T.PCFSoftShadowMap;
 
 var scene = new T.Scene();
-var camera = new T.PerspectiveCamera(32, 1, 0.1, 600);
+var camera = new T.PerspectiveCamera(30, 1, 0.1, 800);
 
-/* Studio environment, generated in code so the page needs no image files. */
+/* Photo-studio environment (soft boxes on a graded backdrop), generated in code. */
 (function buildEnvironment() {
   var env = new T.Scene();
-  var c = document.createElement('canvas'); c.width = 4; c.height = 128;
+  var c = document.createElement('canvas'); c.width = 4; c.height = 256;
   var g = c.getContext('2d');
-  var grad = g.createLinearGradient(0, 0, 0, 128);
-  grad.addColorStop(0, '#f4faf9'); grad.addColorStop(0.45, '#a3b1ae'); grad.addColorStop(0.55, '#3d4a48'); grad.addColorStop(1, '#0d1313');
-  g.fillStyle = grad; g.fillRect(0, 0, 4, 128);
+  var grad = g.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.3, '#d5d9de'); grad.addColorStop(0.5, '#8d939b');
+  grad.addColorStop(0.62, '#4a4f57'); grad.addColorStop(1, '#17191d');
+  g.fillStyle = grad; g.fillRect(0, 0, 4, 256);
   var tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
-  env.add(new T.Mesh(new T.SphereGeometry(60, 32, 16), new T.MeshBasicMaterial({ map: tex, side: T.BackSide })));
-  function panel(w, h, x, y, z, k) {
+  env.add(new T.Mesh(new T.SphereGeometry(80, 48, 24), new T.MeshBasicMaterial({ map: tex, side: T.BackSide })));
+  function box(w, h, x, y, z, k) {
     var m = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ color: new T.Color(k, k, k), side: T.DoubleSide }));
     m.position.set(x, y, z); m.lookAt(0, 0, 0); env.add(m);
   }
-  panel(40, 14, 0, 34, -6, 6);
-  panel(10, 40, 34, 8, -20, 4.5);
-  panel(8, 36, -36, 4, -10, 3);
-  panel(30, 6, 0, 2, 38, 2.5);
-  panel(14, 14, 10, -30, -24, 1.2);
-  panel(60, 30, 4, 6, -44, 1.9);     // broad soft fill from the viewer's side
+  box(46, 22, 0, 44, -10, 5);        // overhead soft box
+  box(18, 44, 44, 10, -26, 3.6);     // front-left strip (the model's nose points to +X)
+  box(16, 40, -46, 6, -22, 2.6);     // rear strip
+  box(70, 36, 0, 8, -56, 1.5);       // broad fill from the viewer's side
+  box(36, 10, 0, 0, 52, 2.2);        // rim light from behind
+  box(24, 24, 8, -40, -20, 0.7);     // floor bounce
   var pm = new T.PMREMGenerator(renderer);
-  scene.environment = pm.fromScene(env, 0.03).texture;
+  scene.environment = pm.fromScene(env, 0.045).texture;
   pm.dispose();
 })();
-scene.add(new T.HemisphereLight(0xffffff, 0x39403f, 0.7));
-var key = new T.DirectionalLight(0xffffff, 1.1); key.position.set(6, 14, -12); scene.add(key);
+scene.add(new T.HemisphereLight(0xffffff, 0x3c4046, 0.45));
+var key = new T.DirectionalLight(0xffffff, 1.5);
+key.position.set(10, 26, -22); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.0006; key.shadow.normalBias = 0.03; key.shadow.radius = 5;
+scene.add(key); scene.add(key.target);
+function fitShadow(center, half) {
+  var s = key.shadow.camera;
+  key.target.position.copy(center); key.position.set(center.x + 10, center.y + 26, center.z - 22);
+  s.left = -half; s.right = half; s.top = half; s.bottom = -half; s.near = 1; s.far = 90 + half * 2;
+  s.updateProjectionMatrix();
+}
 
 /* ------------------------------------------------------------- materials */
-function std(color, metal, rough) { return new T.MeshStandardMaterial({ color: color, metalness: metal, roughness: rough, side: T.DoubleSide }); }
+// Colours sampled from the product photo: titanium-grey housing, bright machined
+// aluminium, dark gunmetal guard and drag knob, turquoise anodised rings.
+function metal(color, rough, extra) {
+  var o = { color: color, metalness: 1, roughness: rough, side: T.DoubleSide };
+  if (extra) for (var k in extra) o[k] = extra[k];
+  return new T.MeshPhysicalMaterial(o);
+}
 var MAT = {
-  body:   function () { return std(0xc9ced1, 0.85, 0.42); },    // satin silver housing
-  silver: function () { return std(0xdde1e3, 1, 0.26); },      // machined bright parts
-  dark:   function () { return std(0x24272a, 0.7, 0.4); },     // gunmetal
-  rubber: function () { return std(0x111212, 0, 0.92); },
-  teal:   function () { return std(0x16b5a8, 0.9, 0.28); },    // the Emeraldas turquoise
-  steel:  function () { return std(0x8f989c, 1, 0.34); },
-  brass:  function () { return std(0xb8924a, 1, 0.34); },
-  bronze: function () { return std(0xa8743a, 1, 0.4); },
-  felt:   function () { return std(0x4b4f52, 0, 1); }
+  body:   function () { return metal(0xa9aeb5, 0.36, { metalness: 0.92 }); },
+  silver: function () { return metal(0xdcdfe2, 0.2); },
+  dark:   function () { return metal(0x3a3f47, 0.38, { metalness: 0.85 }); },
+  black:  function () { return metal(0x1c1e22, 0.42, { metalness: 0.7 }); },
+  rubber: function () { return new T.MeshPhysicalMaterial({ color: 0x141517, metalness: 0, roughness: 0.82, side: T.DoubleSide }); },
+  teal:   function () { return metal(0x13a6a6, 0.24, { metalness: 0.9, clearcoat: 0.6, clearcoatRoughness: 0.18 }); },
+  steel:  function () { return metal(0x8d949b, 0.32); },
+  brass:  function () { return metal(0xc0a058, 0.3); },
+  bronze: function () { return metal(0xa9793f, 0.38); },
+  felt:   function () { return new T.MeshPhysicalMaterial({ color: 0x565a5f, metalness: 0, roughness: 1, side: T.DoubleSide }); }
 };
 
 /* ------------------------------------------------------ geometry helpers */
 function latheX(pts, seg) {            // profile as [along-axis, radius], axis = +X
-  var g = new T.LatheGeometry(pts.map(function (p) { return new T.Vector2(p[1], p[0]); }), seg || 72);
+  var g = new T.LatheGeometry(pts.map(function (p) { return new T.Vector2(p[1], p[0]); }), seg || 128);
   g.rotateZ(-Math.PI / 2); return g;
 }
 function latheZ(pts, seg) {            // axis = +Z
-  var g = new T.LatheGeometry(pts.map(function (p) { return new T.Vector2(p[1], p[0]); }), seg || 56);
+  var g = new T.LatheGeometry(pts.map(function (p) { return new T.Vector2(p[1], p[0]); }), seg || 128);
   g.rotateX(Math.PI / 2); return g;
 }
-function cylX(r, a, b, seg) { var g = new T.CylinderGeometry(r, r, b - a, seg || 40); g.rotateZ(-Math.PI / 2); g.translate((a + b) / 2, 0, 0); return g; }
-function cylZ(r, a, b, seg) { var g = new T.CylinderGeometry(r, r, b - a, seg || 40); g.rotateX(Math.PI / 2); g.translate(0, 0, (a + b) / 2); return g; }
-function ring(axis, a, rin, rout, t, seg) {   // flat washer starting at "a" along the axis
-  var pts = [[a, rin], [a, rout], [a + t, rout], [a + t, rin], [a, rin]];
-  return axis === 'x' ? latheX(pts, seg || 48) : latheZ(pts, seg || 48);
+function curve(pts, n) {               // resample a profile through a smooth spline
+  var c = new T.SplineCurve(pts.map(function (p) { return new T.Vector2(p[0], p[1]); }));
+  return c.getPoints(n || pts.length * 6).map(function (v) { return [v.x, v.y]; });
 }
-function torusX(r, tube, x) { var g = new T.TorusGeometry(r, tube, 10, 80); g.rotateY(Math.PI / 2); g.translate(x, 0, 0); return g; }
-function torusZ(r, tube, z) { var g = new T.TorusGeometry(r, tube, 10, 80); g.translate(0, 0, z); return g; }
-function extrude(shape, depth, bevel, steps) {
-  var g = new T.ExtrudeGeometry(shape, { depth: depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: steps || 4, curveSegments: 28 });
-  g.translate(0, 0, -depth / 2); return g;
+function cylX(r, a, b, seg) { var g = new T.CylinderGeometry(r, r, b - a, seg || 64); g.rotateZ(-Math.PI / 2); g.translate((a + b) / 2, 0, 0); return g; }
+function cylZ(r, a, b, seg) { var g = new T.CylinderGeometry(r, r, b - a, seg || 64); g.rotateX(Math.PI / 2); g.translate(0, 0, (a + b) / 2); return g; }
+function ring(axis, a, rin, rout, t, seg) {   // washer with softened corners, starting at "a" along the axis
+  var e = Math.min(0.02, t / 3);
+  var pts = [[a, rin], [a, rout - e], [a + e, rout], [a + t - e, rout], [a + t, rout - e], [a + t, rin], [a, rin]];
+  return axis === 'x' ? latheX(pts, seg || 96) : latheZ(pts, seg || 96);
 }
-function poly(pts) { var s = new T.Shape(); pts.forEach(function (p, i) { if (i) s.lineTo(p[0], p[1]); else s.moveTo(p[0], p[1]); }); s.closePath(); return s; }
-function polyPath(pts) { var s = new T.Path(); pts.forEach(function (p, i) { if (i) s.lineTo(p[0], p[1]); else s.moveTo(p[0], p[1]); }); s.closePath(); return s; }
+function torusX(r, tube, x) { var g = new T.TorusGeometry(r, tube, 16, 160); g.rotateY(Math.PI / 2); g.translate(x, 0, 0); return g; }
+function torusZ(r, tube, z) { var g = new T.TorusGeometry(r, tube, 16, 160); g.translate(0, 0, z); return g; }
+function rodBetween(a, b, ra, rb) {    // tapered round bar from point a to point b
+  var va = new T.Vector3(a[0], a[1], a[2]), vb = new T.Vector3(b[0], b[1], b[2]);
+  var dir = vb.clone().sub(va), len = dir.length();
+  var g = new T.CylinderGeometry(rb, ra, len, 40);
+  g.applyQuaternion(new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 1, 0), dir.normalize()));
+  g.translate((va.x + vb.x) / 2, (va.y + vb.y) / 2, (va.z + vb.z) / 2);
+  return g;
+}
+// Average normals across faces that meet at less than the crease angle, so bevels and
+// curved walls shade as one continuous surface while real edges stay crisp.
+function smooth(geo, deg) {
+  if (geo.index) geo = geo.toNonIndexed();
+  var pos = geo.attributes.position, n = pos.count, cos = Math.cos((deg || 42) * Math.PI / 180);
+  var fn = new Float32Array(n * 3), fw = new Float32Array(n * 3), out = new Float32Array(n * 3);
+  var a = new T.Vector3(), b = new T.Vector3(), c = new T.Vector3(), map = {}, i, k;
+  for (i = 0; i < n; i += 3) {
+    a.fromBufferAttribute(pos, i); b.fromBufferAttribute(pos, i + 1); c.fromBufferAttribute(pos, i + 2);
+    b.sub(a); c.sub(a); b.cross(c);
+    var len = b.length() || 1;
+    for (k = 0; k < 3; k++) {
+      var j = (i + k) * 3;
+      fw[j] = b.x; fw[j + 1] = b.y; fw[j + 2] = b.z;
+      fn[j] = b.x / len; fn[j + 1] = b.y / len; fn[j + 2] = b.z / len;
+      var key = Math.round(pos.getX(i + k) * 2000) + ',' + Math.round(pos.getY(i + k) * 2000) + ',' + Math.round(pos.getZ(i + k) * 2000);
+      (map[key] || (map[key] = [])).push(i + k);
+    }
+  }
+  for (var id in map) {
+    var list = map[id];
+    for (i = 0; i < list.length; i++) {
+      var v = list[i] * 3, x = 0, y = 0, z = 0;
+      for (k = 0; k < list.length; k++) {
+        var u = list[k] * 3;
+        if (fn[u] * fn[v] + fn[u + 1] * fn[v + 1] + fn[u + 2] * fn[v + 2] >= cos) { x += fw[u]; y += fw[u + 1]; z += fw[u + 2]; }
+      }
+      var l = Math.sqrt(x * x + y * y + z * z) || 1;
+      out[v] = x / l; out[v + 1] = y / l; out[v + 2] = z / l;
+    }
+  }
+  geo.setAttribute('normal', new T.BufferAttribute(out, 3));
+  return geo;
+}
+function extrude(shape, depth, bevel, crease) {
+  var g = new T.ExtrudeGeometry(shape, { depth: depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 8, curveSegments: 48 });
+  g.translate(0, 0, -depth / 2);
+  return smooth(g, crease || 42);
+}
+function splineShape(pts) {            // closed smooth outline through the points
+  var s = new T.Shape();
+  var c = new T.SplineCurve(pts.concat([pts[0]]).map(function (p) { return new T.Vector2(p[0], p[1]); }));
+  // SplineCurve is open; sample it densely and close the loop
+  var sp = new T.CatmullRomCurve3(pts.map(function (p) { return new T.Vector3(p[0], p[1], 0); }), true, 'centripetal').getPoints(pts.length * 14);
+  sp.forEach(function (v, i) { if (i) s.lineTo(v.x, v.y); else s.moveTo(v.x, v.y); });
+  s.closePath(); return s;
+}
+function ribbon(pts) {                 // closed outline from a centre line of [x, y, halfWidth]
+  var c = new T.CatmullRomCurve3(pts.map(function (p) { return new T.Vector3(p[0], p[1], p[2]); }), false, 'centripetal');
+  var n = pts.length * 12, left = [], right = [];
+  for (var i = 0; i <= n; i++) {
+    var p = c.getPoint(i / n), t = c.getTangent(i / n);
+    var l = Math.sqrt(t.x * t.x + t.y * t.y) || 1, nx = -t.y / l, ny = t.x / l;
+    left.push([p.x + nx * p.z, p.y + ny * p.z]); right.push([p.x - nx * p.z, p.y - ny * p.z]);
+  }
+  var s = new T.Shape(), all = left.concat(right.reverse());
+  all.forEach(function (q, k) { if (k) s.lineTo(q[0], q[1]); else s.moveTo(q[0], q[1]); });
+  s.closePath(); return s;
+}
 function mesh(parent, geo, mat, pos, rot) {
   var m = new T.Mesh(geo, mat);
   if (pos) m.position.set(pos[0], pos[1], pos[2]);
   if (rot) m.rotation.set(rot[0], rot[1], rot[2]);
+  m.castShadow = true; m.receiveShadow = true;
   parent.add(m); return m;
 }
 function bearing(parent, axis, r, w) {         // sealed ball bearing centred on the part origin
   mesh(parent, ring(axis, -w / 2, r * 0.78, r, w), MAT.silver());
-  mesh(parent, ring(axis, -w / 2 + 0.01, r * 0.52, r * 0.78, w - 0.02), MAT.dark());
+  mesh(parent, ring(axis, -w / 2 + 0.012, r * 0.52, r * 0.78, w - 0.024), MAT.black());
   mesh(parent, ring(axis, -w / 2, r * 0.36, r * 0.52, w), MAT.silver());
 }
 function screwZ(parent, pos, dir) {            // small screw, head facing +Z (dir 1) or -Z (dir -1)
-  mesh(parent, cylZ(0.13, 0, 0.07 * dir, 16), MAT.dark(), pos);
-  mesh(parent, cylZ(0.06, -0.3 * dir, 0, 12), MAT.steel(), pos);
+  mesh(parent, latheZ([[0, 0.13], [0.05 * dir, 0.13], [0.08 * dir, 0.09], [0.08 * dir, 0]], 32), MAT.black(), pos);
+  mesh(parent, cylZ(0.06, Math.min(0, -0.3 * dir), Math.max(0, -0.3 * dir), 16), MAT.steel(), pos);
 }
 
 /* ----------------------------------------------------------------- parts */
-// The model is built with the handle on local +Z, then mirrored so it matches the usual
+// Units are centimetres. Dimensions are scaled from the product photo, calibrated on the
+// 55 mm handle and the 2500 spool: x runs forward from the front of the body, y up from the
+// spool axis. The model is built with the handle on local +Z, then mirrored to the
 // product-photo pose: spool to the left, handle toward the viewer.
 var root = new T.Group(); root.scale.z = -1; scene.add(root);
 
@@ -363,8 +459,9 @@ function def(id, parent, o) {
   return g;
 }
 
-var GX = -1.85, GY = -0.4;   // drive gear / handle axis (units are centimetres)
-var ARM = 5.5, HANDLE_REST = 0.42, ROTOR_REST = 0.5, STROKE = 0.5;
+var GX = -1.57, GY = 0.75;   // drive gear / handle axis: 7.5 mm above the spool axis
+var ARM = 5.5, HANDLE_REST = 0.615, ROTOR_REST = Math.PI / 2, STROKE = 0.75;
+var BODY_R = 2.05, BODY_HALF = 1.15;
 
 var osc = new T.Group(); root.add(osc);                 // everything that slides with the main shaft
 var rotorSpin = new T.Group(); root.add(rotorSpin);     // everything that turns with the pinion
@@ -372,306 +469,317 @@ var handleSpin = new T.Group(); handleSpin.position.set(GX, GY, 0); root.add(han
 
 /* --- Spool and drag ---------------------------------------------------- */
 var FELT = 'Soaked in drag grease, it slips against the metal washers on either side. That controlled slip is the drag.';
-var g;
-g = def('dragKnob', osc, { n: 'Drag knob', g: 'spool', shell: true, ex: [18.8, 0, 0], pin: [4.66, 0.5, 0.6],
+var g, i;
+g = def('dragKnob', osc, { n: 'Drag knob', g: 'spool', shell: true, ex: [21.1, 0, 0], pin: [6.5, 0.5, 0.6],
   t: 'Screws onto the tip of the main shaft and presses on the washer stack inside the spool. More turns, more pressure, more drag.',
   f: [['Max drag', '10 kg']] });
-mesh(g, latheX([[3.86, 0.45], [3.86, 0.9], [3.97, 0.95], [3.97, 1.14], [4.1, 1.24], [4.42, 1.2], [4.58, 1.0], [4.62, 0]]), MAT.dark());
-for (var i = 0; i < 3; i++) mesh(g, new T.BoxGeometry(0.2, 2.1, 0.3), MAT.dark(), [4.6, 0, 0], [i * Math.PI / 3, 0, 0]);
-mesh(g, cylX(0.36, 4.58, 4.76), MAT.silver());
+mesh(g, latheX(curve([[5.5, 0.5], [5.5, 0.95], [5.62, 1.02], [5.64, 1.16], [5.78, 1.22], [6.18, 1.18], [6.4, 1.02], [6.48, 0.6], [6.5, 0.36]], 60)), MAT.black());
+for (i = 0; i < 3; i++) mesh(g, smooth(new T.CapsuleGeometry(0.13, 1.9, 6, 16)), MAT.dark(), [6.44, 0, 0], [i * Math.PI / 3, 0, 0]);
+mesh(g, latheX([[6.44, 0.4], [6.56, 0.4], [6.6, 0.34], [6.6, 0]], 64), MAT.silver());
 
-g = def('dragSeal', osc, { n: 'Drag knob seal', g: 'spool', inside: true, ex: [18.2, 0, 0], pin: [3.95, 1.05, 0],
+g = def('dragSeal', osc, { n: 'Drag knob seal', g: 'spool', inside: true, ex: [20.35, 0, 0], pin: [5.56, 1.08, 0],
   t: 'A rubber ring under the knob that keeps salt water and sand out of the drag washers.' });
-mesh(g, torusX(1.05, 0.05, 3.95), MAT.rubber());
+mesh(g, torusX(1.08, 0.05, 5.56), MAT.rubber());
 
-g = def('clip', osc, { n: 'Retainer clip', g: 'spool', inside: true, ex: [17.8, 0, 0], pin: [3.84, 1.18, 0],
+g = def('clip', osc, { n: 'Retainer clip', g: 'spool', inside: true, ex: [19.84, 0, 0], pin: [5.46, 1.24, 0],
   t: 'A spring wire ring that snaps into a groove in the spool and holds the drag washers in place when the knob is off.' });
-mesh(g, torusX(1.18, 0.03, 3.84), MAT.steel());
+mesh(g, torusX(1.24, 0.03, 5.46), MAT.steel());
 
 function washer(id, name, x, ex, kind, text) {
   var w = def(id, osc, { n: name, g: 'spool', inside: true, ex: [ex, 0, 0], pin: [x + 0.03, 1.0, 0.3], t: text });
-  if (kind === 'felt') mesh(w, ring('x', x, 0.3, 1.14, 0.07), MAT.felt());
+  if (kind === 'felt') mesh(w, ring('x', x, 0.3, 1.2, 0.07), MAT.felt());
   else {
-    mesh(w, ring('x', x, 0.22, 1.12, 0.05), MAT.silver());
-    if (kind === 'ear') { mesh(w, new T.BoxGeometry(0.05, 0.3, 0.3), MAT.silver(), [x + 0.025, 1.17, 0]); mesh(w, new T.BoxGeometry(0.05, 0.3, 0.3), MAT.silver(), [x + 0.025, -1.17, 0]); }
+    mesh(w, ring('x', x, 0.22, 1.18, 0.05), MAT.silver());
+    if (kind === 'ear') { mesh(w, new T.BoxGeometry(0.05, 0.28, 0.3), MAT.silver(), [x + 0.025, 1.22, 0]); mesh(w, new T.BoxGeometry(0.05, 0.28, 0.3), MAT.silver(), [x + 0.025, -1.22, 0]); }
   }
 }
-washer('wTop', 'Keyed drag washer', 3.74, 17.4, 'key', 'Locked to the main shaft by its shaped centre hole, so it cannot turn. The knob presses on this one first.');
-washer('felt1', 'Felt drag washer', 3.66, 17.0, 'felt', FELT);
-washer('wEar', 'Eared drag washer', 3.58, 16.6, 'ear', 'Its two ears sit in slots in the spool, so it turns with the spool while the keyed washers stay still.');
-washer('felt2', 'Felt drag washer', 3.5, 16.2, 'felt', FELT);
-washer('wKey', 'Keyed drag washer', 3.42, 15.8, 'key', 'A second washer locked to the main shaft. Alternating fixed and turning washers multiplies the friction surface.');
-washer('felt3', 'Felt drag washer', 3.34, 15.4, 'felt', FELT);
+washer('wTop', 'Keyed drag washer', 5.34, 19.36, 'key', 'Locked to the main shaft by its shaped centre hole, so it cannot turn. The knob presses on this one first.');
+washer('felt1', 'Felt drag washer', 5.26, 18.94, 'felt', FELT);
+washer('wEar', 'Eared drag washer', 5.18, 18.52, 'ear', 'Its two ears sit in slots in the spool, so it turns with the spool while the keyed washers stay still.');
+washer('felt2', 'Felt drag washer', 5.1, 18.1, 'felt', FELT);
+washer('wKey', 'Keyed drag washer', 5.02, 17.68, 'key', 'A second washer locked to the main shaft. Alternating fixed and turning washers multiplies the friction surface.');
+washer('felt3', 'Felt drag washer', 4.94, 17.26, 'felt', FELT);
 
-g = def('spool', osc, { n: 'Spool', g: 'spool', shell: true, ex: [14.2, 0, 0], pin: [1.6, 1.6, 1.62],
+g = def('spool', osc, { n: 'Spool', g: 'spool', shell: true, ex: [15.9, 0, 0], pin: [2.6, 1.65, 1.62],
   t: 'A shallow 2500-size spool for thin braid. The long skirt slides over the rotor, the ribbed arbor holds the line, and the cup at the front houses the drag stack.',
   f: [['Capacity', 'PE 0.8 – 200 m'], ['Size', 'LT 2500'], ['Family', 'Airdrive spool']] });
-mesh(g, latheX([[0.9, 2.12], [0.9, 2.26], [2.08, 2.26], [2.18, 2.14], [2.22, 1.5], [3.7, 1.5], [3.74, 2.2], [3.84, 2.28], [3.95, 2.2], [3.97, 1.25], [3.3, 1.25], [3.3, 0.35], [2.3, 0.35], [2.3, 0.6], [2.2, 0.6]]), MAT.silver());
-for (i = 0; i < 9; i++) mesh(g, torusX(2.262, 0.012, 1.02 + i * 0.125), MAT.dark());
-for (i = 0; i < 10; i++) mesh(g, torusX(1.505, 0.012, 2.4 + i * 0.13), MAT.steel());
-mesh(g, torusX(2.2, 0.055, 3.96), MAT.teal());
-mesh(g, torusX(2.262, 0.03, 0.93), MAT.teal());
+mesh(g, latheX([[1.62, 2.17], [1.63, 2.27], [1.68, 2.3], [3.62, 2.3], [3.72, 2.26], [3.78, 2.14], [3.8, 1.86], [3.84, 1.8], [5.28, 1.8], [5.32, 1.86], [5.34, 2.16],
+  [5.38, 2.26], [5.46, 2.3], [5.56, 2.27], [5.61, 2.18], [5.62, 1.34], [5.58, 1.3], [4.9, 1.3], [4.9, 0.35], [3.9, 0.35], [3.9, 0.6], [3.8, 0.6]], 160), MAT.silver());
+for (i = 0; i < 13; i++) mesh(g, torusX(1.803, 0.014, 3.96 + i * 0.105), MAT.steel());
+mesh(g, torusX(2.24, 0.075, 5.6), MAT.teal());
+mesh(g, torusX(2.3, 0.03, 1.72), MAT.teal());
 
-g = def('spoolBearing', osc, { n: 'Spool bearing', g: 'spool', inside: true, at: [2.55, 0, 0], ex: [11.9, 0, 0], pin: [0, 0.5, 0],
+g = def('spoolBearing', osc, { n: 'Spool bearing', g: 'spool', inside: true, at: [4.2, 0, 0], ex: [12.6, 0, 0], pin: [0, 0.5, 0],
   t: 'Carries the spool on the main shaft so it turns freely and evenly when the drag slips.' });
 bearing(g, 'x', 0.55, 0.22);
 
-g = def('click', osc, { n: 'Drag click wheel', g: 'spool', inside: true, ex: [12.9, 0, 0], pin: [0.8, 0.7, 0],
+g = def('click', osc, { n: 'Drag click wheel', g: 'spool', inside: true, ex: [12.4, 0, 0], pin: [3.66, 0.7, 0],
   t: 'A toothed wheel keyed to the shaft behind the spool. A small pawl in the spool ticks over its teeth, which is the sound you hear when line is pulled.' });
-mesh(g, ring('x', 0.72, 0.12, 0.62, 0.12, 32), MAT.brass());
-for (i = 0; i < 18; i++) { var ca = i / 18 * Math.PI * 2; mesh(g, new T.BoxGeometry(0.12, 0.1, 0.12), MAT.brass(), [0.78, Math.cos(ca) * 0.66, Math.sin(ca) * 0.66], [ca, 0, 0]); }
+mesh(g, ring('x', 3.6, 0.12, 0.62, 0.12, 64), MAT.brass());
+for (i = 0; i < 18; i++) { var ca = i / 18 * Math.PI * 2; mesh(g, new T.BoxGeometry(0.12, 0.1, 0.12), MAT.brass(), [3.66, Math.cos(ca) * 0.66, Math.sin(ca) * 0.66], [ca, 0, 0]); }
 
-g = def('shims', osc, { n: 'Spool shims', g: 'spool', inside: true, ex: [12.6, 0, 0], pin: [0.6, 0.42, 0],
+g = def('shims', osc, { n: 'Spool shims', g: 'spool', inside: true, ex: [11.9, 0, 0], pin: [3.5, 0.42, 0],
   t: 'Thin washers behind the spool. Adding or removing one moves the spool forward or back and changes how the line stacks, flat or tapered.' });
-mesh(g, ring('x', 0.6, 0.12, 0.42, 0.03, 32), MAT.silver());
-mesh(g, ring('x', 0.65, 0.12, 0.42, 0.03, 32), MAT.brass());
+mesh(g, ring('x', 3.48, 0.12, 0.42, 0.03, 48), MAT.silver());
+mesh(g, ring('x', 3.53, 0.12, 0.42, 0.03, 48), MAT.brass());
 
 /* --- Rotor and bail ---------------------------------------------------- */
-g = def('nut', rotorSpin, { n: 'Rotor nut', g: 'rotor', inside: true, ex: [10.4, 0, 0], pin: [1.7, 0.42, 0],
+g = def('nut', rotorSpin, { n: 'Rotor nut', g: 'rotor', inside: true, ex: [11.5, 0, 0], pin: [2.76, 0.42, 0],
   t: 'Clamps the rotor onto the pinion gear. It hides under the spool.' });
-var hex = new T.CylinderGeometry(0.44, 0.44, 0.24, 6); hex.rotateZ(-Math.PI / 2); hex.translate(1.7, 0, 0);
+var hex = new T.CylinderGeometry(0.44, 0.44, 0.22, 6); hex.rotateZ(-Math.PI / 2); hex.translate(2.78, 0, 0);
 mesh(g, hex, MAT.steel());
 
-g = def('nutLock', rotorSpin, { n: 'Rotor nut lock', g: 'rotor', inside: true, ex: [10.9, 0, 0], pin: [1.88, 0.55, 0],
+g = def('nutLock', rotorSpin, { n: 'Rotor nut lock', g: 'rotor', inside: true, ex: [11.95, 0, 0], pin: [2.95, 0.55, 0],
   t: 'A small plate and screw that stop the rotor nut from backing off with vibration.' });
-mesh(g, new T.BoxGeometry(0.05, 1.3, 0.5), MAT.dark(), [1.86, 0.25, 0]);
-mesh(g, cylX(0.11, 1.88, 1.95, 16), MAT.steel(), [0, 0.72, 0]);
+mesh(g, new T.BoxGeometry(0.05, 1.3, 0.5), MAT.black(), [2.93, 0.25, 0]);
+mesh(g, cylX(0.11, 2.95, 3.02, 24), MAT.steel(), [0, 0.72, 0]);
 
-g = def('rotor', rotorSpin, { n: 'Rotor', g: 'rotor', shell: true, ex: [7.8, 0, 0], pin: [0.75, 1.5, 1.45],
+g = def('rotor', rotorSpin, { n: 'Rotor', g: 'rotor', shell: true, ex: [9.3, 0, 0], pin: [0.8, 0, -2.47],
   t: 'Spins around the spool and carries the bail. Each handle turn takes it round 5.7 times. The open arms keep it light so it starts and stops quickly.',
   f: [['Speed', '5.7 turns per handle turn'], ['Retrieve', '80 cm per handle turn'], ['Family', 'Airdrive rotor']] });
-mesh(g, latheX([[0.1, 1.1], [0.1, 1.9], [0.35, 2.02], [1.35, 2.0], [1.52, 1.86], [1.56, 0.5]]), MAT.body());
-mesh(g, torusX(2.02, 0.035, 0.42), MAT.teal());
+mesh(g, latheX([[0.08, 1.25], [0.08, 2.3], [0.14, 2.4], [0.26, 2.45], [1.45, 2.45], [1.56, 2.38], [1.64, 2.1], [1.7, 2.04], [2.5, 2.02], [2.6, 1.94], [2.66, 1.8], [2.66, 0.5]], 160), MAT.body());
+mesh(g, torusX(2.45, 0.035, 0.4), MAT.teal());
 (function () {
-  var arm = poly([[0.22, 1.85], [0.22, 2.45], [0.95, 2.86], [3.05, 2.86], [3.5, 2.66], [3.5, 2.42], [1.05, 2.42], [0.85, 1.85]]);
-  arm.holes.push(polyPath([[1.3, 2.52], [1.3, 2.76], [2.85, 2.76], [2.85, 2.52]]));
-  var geo = extrude(arm, 0.8, 0.06);
+  // One arm, drawn in the plane through the axis: [x, radius]. The inner edge clears the spool skirt.
+  var arm = splineShape([[0.2, 2.3], [0.42, 2.9], [1.3, 3.14], [2.5, 3.12], [3.3, 3.04], [3.6, 2.86], [3.56, 2.62], [3.0, 2.56], [1.9, 2.56], [1.25, 2.5], [0.9, 2.2], [0.5, 2.1]]);
+  var win = new T.CatmullRomCurve3([[1.45, 2.74], [1.55, 2.94], [2.4, 2.95], [3.0, 2.88], [3.05, 2.74], [2.4, 2.72]].map(function (p) { return new T.Vector3(p[0], p[1], 0); }), true, 'centripetal').getPoints(60);
+  var hole = new T.Path(); win.forEach(function (v, k) { if (k) hole.lineTo(v.x, v.y); else hole.moveTo(v.x, v.y); }); hole.closePath();
+  arm.holes.push(hole);
+  var geo = extrude(arm, 0.95, 0.14, 50);
   mesh(g, geo, MAT.body()); mesh(g, geo, MAT.body(), null, [Math.PI, 0, 0]);
-  mesh(g, new T.BoxGeometry(1.5, 0.12, 0.5), MAT.dark(), [2.07, -2.64, 0]);   // counterweight in the plain arm
+  mesh(g, smooth(new T.CapsuleGeometry(0.1, 1.2, 6, 16)), MAT.teal(), [2.25, -2.83, 0], [0, 0, Math.PI / 2]);   // balance weight in the plain arm
 })();
 
-g = def('friction', root, { n: 'Rotor friction ring', g: 'rotor', inside: true, ex: [7.2, 0, 0], pin: [0.1, 1.3, 0],
+g = def('friction', root, { n: 'Rotor friction ring', g: 'rotor', inside: true, ex: [8.7, 0, 0], pin: [0.1, 1.35, 0],
   t: 'A rubber ring on the body that brushes the rotor lightly, so the rotor does not spin on its own when the bail is open for a cast.' });
-mesh(g, torusX(1.3, 0.06, 0.1), MAT.rubber());
+mesh(g, torusX(1.35, 0.06, 0.1), MAT.rubber());
 
-var RX = 3.72, RY = 2.74;   // line roller position on the bail arm
-g = def('lever', rotorSpin, { n: 'Bail arm lever', g: 'rotor', ex: [7.8, 1.8, 0], pin: [3.3, 3.12, -0.62],
+var RX = 3.85, RY = 2.85, WIRE_R = 4.5;   // line roller position on the bail arm, bail wire reach
+g = def('lever', rotorSpin, { n: 'Bail arm lever', g: 'rotor', ex: [9.3, 2.0, 0], pin: [3.5, 3.3, 0.5],
   t: 'Pivots on the rotor arm and carries the line roller. Flipping it open releases the line for a cast.' });
-mesh(g, extrude(poly([[2.7, 2.9], [3.2, 3.12], [3.9, 3.02], [4.02, 2.62], [3.6, 2.46], [2.9, 2.6]]), 0.3, 0.05), MAT.silver(), [0, 0, -0.62]);
+mesh(g, extrude(splineShape([[2.95, 2.95], [3.3, 3.3], [3.9, 3.34], [4.28, 3.05], [4.25, 2.62], [3.85, 2.5], [3.3, 2.62]]), 0.26, 0.09, 60), MAT.silver(), [0, 0, 0.56]);
 
-g = def('leverScrew', rotorSpin, { n: 'Lever screw', g: 'rotor', ex: [7.8, 1.8, -1.0], pin: [3.1, 2.85, -0.9],
+g = def('leverScrew', rotorSpin, { n: 'Lever screw', g: 'rotor', ex: [9.3, 2.0, 1.0], pin: [3.3, 3.0, 0.86],
   t: 'The pivot screw for the bail arm lever.' });
-screwZ(g, [3.1, 2.85, -0.82], -1);
+screwZ(g, [3.3, 2.98, 0.78], 1);
 
-g = def('collarA', rotorSpin, { n: 'Roller collar', g: 'rotor', at: [RX, RY, 0], ex: [7.8, 1.8, 0.5], pin: [0, 0.24, -0.38],
+g = def('collarA', rotorSpin, { n: 'Roller collar', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -0.55], pin: [0, 0.24, 0.3],
   t: 'A spacer that centres the line roller and its bearing on the lever.' });
-mesh(g, ring('z', -0.42, 0.08, 0.24, 0.07, 24), MAT.dark());
+mesh(g, ring('z', 0.27, 0.08, 0.24, 0.07, 32), MAT.black());
 
-g = def('rollerBearing', rotorSpin, { n: 'Line roller bearing', g: 'rotor', inside: true, at: [RX, RY, -0.17], ex: [7.8, 1.8, 1.0], pin: [0, 0.17, 0],
+g = def('rollerBearing', rotorSpin, { n: 'Line roller bearing', g: 'rotor', inside: true, at: [RX, RY, 0.02], ex: [9.3, 2.0, -1.1], pin: [0, 0.17, 0],
   t: 'A tiny ball bearing inside the line roller. It lets the roller turn under load so the braid is not dragged across a fixed surface.' });
 bearing(g, 'z', 0.17, 0.2);
 
-g = def('roller', rotorSpin, { n: 'Line roller', g: 'rotor', shell: true, at: [RX, RY, 0], ex: [7.8, 1.8, 1.6], pin: [0, 0.3, -0.1],
+g = def('roller', rotorSpin, { n: 'Line roller', g: 'rotor', shell: true, at: [RX, RY, 0], ex: [9.3, 2.0, -1.75], pin: [0, 0.3, 0],
   t: 'The only place the line touches the reel under load. Its waisted shape keeps the braid centred and feeds it onto the spool without twist. Rinse it after salt water.' });
-mesh(g, latheZ([[-0.34, 0.3], [-0.26, 0.21], [-0.02, 0.19], [0.06, 0.3]]), MAT.silver());
+mesh(g, latheZ(curve([[-0.22, 0.3], [-0.16, 0.22], [0.0, 0.19], [0.18, 0.21], [0.27, 0.3]], 30), 64), MAT.silver());
 
-g = def('collarB', rotorSpin, { n: 'Roller collar', g: 'rotor', at: [RX, RY, 0], ex: [7.8, 1.8, 2.3], pin: [0, 0.24, 0.1],
+g = def('collarB', rotorSpin, { n: 'Roller collar', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -2.4], pin: [0, 0.24, -0.26],
   t: 'The outer spacer, between the line roller and the end of the bail wire.' });
-mesh(g, ring('z', 0.06, 0.08, 0.24, 0.07, 24), MAT.dark());
+mesh(g, ring('z', -0.29, 0.08, 0.24, 0.07, 32), MAT.black());
 
-g = def('wire', rotorSpin, { n: 'Bail wire', g: 'rotor', ex: [9.0, 0, 3.4], pin: [4.8, 0, 3.0],
+g = def('wire', rotorSpin, { n: 'Bail wire', g: 'rotor', ex: [10.6, 0, -3.6], pin: [3.7, 0, -WIRE_R],
   t: 'Catches the line when you close the bail and guides it down to the roller. Thin and light so the rotor stays balanced.',
   f: [['Family', 'Airdrive bail']] });
 (function () {
   var pts = [];
-  for (var k = 0; k <= 28; k++) {
-    var t = k / 28 * Math.PI;
-    pts.push(new T.Vector3(RX + Math.sin(t) * 1.1, Math.cos(t) * RY, 0.3 * (1 - k / 28) + Math.sin(t) * 2.7));
+  for (var k = 0; k <= 40; k++) {
+    var t = k / 40 * Math.PI;
+    pts.push(new T.Vector3(RX - Math.sin(t) * 0.15, Math.cos(t) * RY, -0.45 * (1 - k / 40) - Math.sin(t) * WIRE_R));
   }
-  mesh(g, new T.TubeGeometry(new T.CatmullRomCurve3(pts), 90, 0.065, 10), MAT.silver());
-  mesh(g, latheZ([[0.13, 0.26], [0.2, 0.26], [0.34, 0.1], [0.36, 0]]), MAT.silver(), [RX, RY, 0]);
+  mesh(g, new T.TubeGeometry(new T.CatmullRomCurve3(pts), 200, 0.07, 16), MAT.silver());
+  mesh(g, latheZ(curve([[-0.29, 0.26], [-0.36, 0.25], [-0.5, 0.12], [-0.54, 0]], 20), 48), MAT.silver(), [RX, RY, 0]);
 })();
 
-g = def('holder', rotorSpin, { n: 'Bail holder', g: 'rotor', ex: [7.8, -1.8, 0], pin: [3.6, -2.95, -0.2],
+g = def('holder', rotorSpin, { n: 'Bail holder', g: 'rotor', ex: [9.3, -2.0, 0], pin: [3.6, -3.1, 0.2],
   t: 'The hinge at the far end of the bail wire, on the opposite rotor arm.' });
-mesh(g, new T.SphereGeometry(0.3, 24, 16), MAT.silver(), [3.6, -2.74, 0]).scale.set(1.3, 0.9, 1.1);
+mesh(g, new T.SphereGeometry(0.3, 48, 32), MAT.silver(), [RX - 0.1, -RY, 0]).scale.set(1.35, 0.95, 1.15);
 
-g = def('holderScrew', rotorSpin, { n: 'Holder screw', g: 'rotor', ex: [7.8, -1.8, -1.0], pin: [3.6, -2.74, -0.42],
+g = def('holderScrew', rotorSpin, { n: 'Holder screw', g: 'rotor', ex: [9.3, -2.0, 1.0], pin: [RX - 0.1, -RY, 0.44],
   t: 'Fixes the bail holder to its rotor arm and acts as its pivot.' });
-screwZ(g, [3.6, -2.74, -0.34], -1);
+screwZ(g, [RX - 0.1, -RY, 0.36], 1);
 
-g = def('spring', rotorSpin, { n: 'Bail spring', g: 'rotor', ex: [7.8, 1.0, -1.6], pin: [2.0, 2.72, 0],
+g = def('spring', rotorSpin, { n: 'Bail spring', g: 'rotor', ex: [9.3, 1.2, 1.8], pin: [2.2, 2.9, 0],
   t: 'Sits inside the rotor arm and snaps the bail fully open or fully shut, so it never rests halfway.' });
 (function () {
   var pts = [];
-  for (var k = 0; k <= 160; k++) { var t = k / 160; pts.push(new T.Vector3(1.4 + t * 1.25, 2.64 + Math.cos(t * 50) * 0.08, Math.sin(t * 50) * 0.08)); }
-  mesh(g, new T.TubeGeometry(new T.CatmullRomCurve3(pts), 320, 0.016, 6), MAT.bronze());
-  mesh(g, cylX(0.04, 1.35, 2.75, 10), MAT.steel(), [0, 2.64, 0]);
+  for (var k = 0; k <= 200; k++) { var t = k / 200; pts.push(new T.Vector3(1.65 + t * 1.25, 2.84 + Math.cos(t * 56) * 0.075, Math.sin(t * 56) * 0.075)); }
+  mesh(g, new T.TubeGeometry(new T.CatmullRomCurve3(pts), 500, 0.016, 8), MAT.bronze());
+  mesh(g, cylX(0.035, 1.6, 2.95, 12), MAT.steel(), [0, 2.84, 0]);
 })();
 
 /* --- Body and gears ---------------------------------------------------- */
-g = def('body', root, { n: 'Body, stem and foot', g: 'body', shell: true, ex: [0, 0, 0], pin: [-2.6, 1.25, 0.9],
+g = def('body', root, { n: 'Body, stem and foot', g: 'body', shell: true, ex: [0, 0, 0], pin: [-0.4, 4.2, 0.36],
   t: 'One rigid shell that holds the gears in line. The stem and the foot that slides into the rod’s reel seat are part of the same piece. Total reel weight is 175 g.',
   f: [['Reel weight', '175 g'], ['Concept', 'LT (light, tough)']], v: [2.75, 1.25] });
 (function () {
-  var s = new T.Shape();
-  s.moveTo(-0.2, 1.3); s.lineTo(-2.4, 1.45);
-  s.quadraticCurveTo(-3.75, 1.4, -3.75, -0.3);
-  s.quadraticCurveTo(-3.75, -2.3, -1.9, -2.35);
-  s.quadraticCurveTo(-0.6, -2.35, -0.2, -1.3);
-  s.closePath();
-  mesh(g, extrude(s, 1.5, 0.2, 6), MAT.body());
-  mesh(g, cylZ(0.7, -1.02, -0.9), MAT.body(), [GX, GY, 0]);
-  var stem = poly([[-2.9, 1.3], [-1.3, 5.35], [0.2, 5.35], [-0.9, 1.3]]);
-  stem.holes.push(polyPath([[-2.15, 2.0], [-1.25, 4.35], [-0.6, 4.35], [-1.3, 2.0]]));
-  mesh(g, extrude(stem, 0.5, 0.1), MAT.body());
-  mesh(g, extrude(poly([[-4.2, 5.64], [-1.7, 5.3], [0.5, 5.3], [3.3, 5.64], [3.3, 5.74], [-4.2, 5.74]]), 1.1, 0.07), MAT.body());
+  // round gear housing, filleted on both faces
+  var h = BODY_HALF, r = BODY_R;
+  mesh(g, latheZ([[-h, 0.6], [-h, r - 0.42], [-h + 0.05, r - 0.25], [-h + 0.18, r - 0.1], [-h + 0.4, r], [h - 0.45, r], [h - 0.28, r - 0.06], [h - 0.16, r - 0.2], [h - 0.12, r - 0.4]], 192), MAT.body(), [GX, GY, 0]);
+  // neck toward the rotor
+  mesh(g, latheX(curve([[-2.2, 1.08], [-0.6, 1.1], [-0.3, 1.2], [-0.12, 1.28], [-0.02, 1.2], [0, 1.05]], 40), 128), MAT.body());
+  // lower belly that carries the oscillation gear
+  mesh(g, extrude(splineShape([[-3.2, 1.2], [-3.75, 0.2], [-3.6, -0.8], [-2.9, -1.45], [-1.6, -1.6], [-0.7, -1.15], [-0.5, -0.2], [-1.2, 0.4], [-2.2, 1.0]]), 1.5, 0.3, 60), MAT.body());
+  // stem: rises from the housing and sweeps forward under the foot
+  mesh(g, extrude(ribbon([[-2.1, 2.2, 1.0], [-1.45, 2.9, 0.72], [-0.6, 3.75, 0.5], [0.2, 4.7, 0.36], [0.72, 5.9, 0.3], [0.82, 7.0, 0.31], [0.82, 7.85, 0.5]]), 0.42, 0.2, 60), MAT.body());
+  // foot
+  var foot = new T.Shape();
+  foot.moveTo(-2.2, 8.12); foot.quadraticCurveTo(-2.3, 8.26, -2.1, 8.26); foot.lineTo(4.1, 8.26); foot.quadraticCurveTo(4.3, 8.26, 4.2, 8.12);
+  foot.quadraticCurveTo(2.6, 7.86, 1.5, 7.7); foot.lineTo(0.2, 7.7); foot.quadraticCurveTo(-1.0, 7.86, -2.2, 8.12);
+  var fg = extrude(foot, 0.86, 0.14, 60);
+  // the top of the foot is curved to sit against the rod blank
+  (function (geo) { var p = geo.attributes.position; for (var k = 0; k < p.count; k++) { var z = p.getZ(k); p.setY(k, p.getY(k) - 0.22 * z * z * (p.getY(k) > 8.0 ? 1 : 0.4)); } p.needsUpdate = true; smooth(geo, 60); })(fg);
+  mesh(g, fg, MAT.body());
 })();
 // Ghost of the rod, for context only
-mesh(root, cylX(0.48, -6.5, 6.5, 32), new T.MeshStandardMaterial({ color: 0x8fa39c, transparent: true, opacity: 0.16, roughness: 0.6, depthWrite: false }), [0, 6.25, 0]);
-
-g = def('guard', root, { n: 'Rear guard', g: 'body', shell: true, ex: [-2.6, -1.2, 0], pin: [-4.1, -1.2, 0.6],
-  t: 'A cover over the back of the body. It takes the knocks when the reel is put down on rocks or a deck.' });
 (function () {
-  var s = poly([[-3.1, 1.25], [-4.0, 0.6], [-4.2, -0.5], [-4.05, -1.7], [-3.2, -2.6], [-2.3, -2.75], [-2.3, -2.3], [-3.1, -2.1], [-3.6, -1.4], [-3.75, -0.4], [-3.6, 0.5], [-3.0, 1.0]]);
-  mesh(g, extrude(s, 1.75, 0.1), MAT.silver());
+  var m = new T.Mesh(cylX(0.5, -5.5, 7.5, 48), new T.MeshStandardMaterial({ color: 0x8c949c, transparent: true, opacity: 0.14, roughness: 0.6, depthWrite: false }));
+  m.position.set(0, 8.8, 0); root.add(m);
 })();
 
-g = def('guardScrews', root, { n: 'Guard screws', g: 'body', ex: [-3.9, -1.8, 0], pin: [-4.25, -0.5, 0],
+g = def('guard', root, { n: 'Rear guard', g: 'body', shell: true, ex: [-3.6, -2.4, 0], pin: [-4.4, -0.3, 0.8],
+  t: 'A cover over the back of the body. It takes the knocks when the reel is put down on rocks or a deck.' });
+(function () {
+  var s = new T.Shape(), out = new T.CatmullRomCurve3([[-3.0, 2.25], [-3.9, 1.5], [-4.5, 0.3], [-4.7, -0.8], [-4.2, -1.55], [-3.0, -1.85], [-1.7, -1.85], [-0.95, -1.5]]
+    .map(function (p) { return new T.Vector3(p[0], p[1], 0); }), false, 'centripetal').getPoints(80);
+  out.forEach(function (v, k) { if (k) s.lineTo(v.x, v.y); else s.moveTo(v.x, v.y); });
+  s.lineTo(-1.25, -1.2); s.absarc(GX, GY, BODY_R - 0.08, -1.41, 2.3, true); s.closePath();
+  mesh(g, extrude(s, 1.7, 0.26, 60), MAT.dark());
+})();
+
+g = def('guardScrews', root, { n: 'Guard screws', g: 'body', ex: [-5.2, -3.0, 0], pin: [-4.72, -0.3, 0],
   t: 'Two screws that fix the rear guard to the body.', f: [['Quantity', '2']] });
-mesh(g, cylX(0.12, -4.34, -4.28, 16), MAT.dark(), [0, -0.5, 0]); mesh(g, cylX(0.06, -4.28, -3.95, 12), MAT.steel(), [0, -0.5, 0]);
-mesh(g, cylX(0.12, -4.19, -4.13, 16), MAT.dark(), [0, -1.6, 0]); mesh(g, cylX(0.06, -4.13, -3.8, 12), MAT.steel(), [0, -1.6, 0]);
+mesh(g, cylX(0.12, -4.74, -4.68, 24), MAT.black(), [0, -0.3, 0]); mesh(g, cylX(0.06, -4.68, -4.3, 16), MAT.steel(), [0, -0.3, 0]);
+mesh(g, cylX(0.12, -4.5, -4.44, 24), MAT.black(), [0, -1.2, 0]); mesh(g, cylX(0.06, -4.44, -4.1, 16), MAT.steel(), [0, -1.2, 0]);
 
-g = def('frontPlate', root, { n: 'Front retainer plate', g: 'body', shell: true, ex: [6.6, 0, 0], pin: [0.0, 1.25, 0],
+g = def('frontPlate', root, { n: 'Front retainer plate', g: 'body', shell: true, ex: [8.3, 0, 0], pin: [0.0, 1.2, 0],
   t: 'Bolts to the front of the body and holds the anti-reverse clutch and the front pinion bearing in place.' });
-mesh(g, ring('x', -0.25, 0.42, 1.25, 0.3, 56), MAT.dark());
-for (i = 0; i < 3; i++) { var pa = i / 3 * Math.PI * 2 + 0.5; mesh(g, cylX(0.1, 0.05, 0.1, 12), MAT.steel(), [0, Math.cos(pa) * 1.0, Math.sin(pa) * 1.0]); }
+mesh(g, ring('x', -0.3, 0.42, 1.2, 0.36, 96), MAT.black());
+for (i = 0; i < 3; i++) { var pa = i / 3 * Math.PI * 2 + 0.5; mesh(g, cylX(0.1, 0.05, 0.1, 16), MAT.steel(), [0, Math.cos(pa) * 0.98, Math.sin(pa) * 0.98]); }
 
-g = def('clutch', root, { n: 'Anti-reverse clutch', g: 'body', inside: true, ex: [5.6, 0, 0], pin: [0.3, 0.78, 0],
+g = def('clutch', root, { n: 'Anti-reverse clutch', g: 'body', inside: true, ex: [6.9, 0, 0], pin: [0.35, 0.8, 0],
   t: 'A one-way roller bearing. Its rollers free-wheel when you wind in and jam instantly the other way, so the handle cannot turn backwards. This is the “+1” in the bearing count.',
   f: [['Type', 'Roller bearing']] });
-mesh(g, ring('x', 0.1, 0.52, 0.78, 0.4, 40), MAT.dark());
-for (i = 0; i < 8; i++) { var ra = i / 8 * Math.PI * 2; mesh(g, cylX(0.07, 0.14, 0.46, 10), MAT.silver(), [0, Math.cos(ra) * 0.48, Math.sin(ra) * 0.48]); }
+mesh(g, ring('x', 0.1, 0.52, 0.8, 0.5, 64), MAT.black());
+for (i = 0; i < 8; i++) { var ra = i / 8 * Math.PI * 2; mesh(g, cylX(0.07, 0.14, 0.56, 16), MAT.silver(), [0, Math.cos(ra) * 0.48, Math.sin(ra) * 0.48]); }
 
-g = def('sleeve', rotorSpin, { n: 'Clutch sleeve', g: 'body', inside: true, ex: [5.0, 0, 0], pin: [0.3, 0.4, 0],
+g = def('sleeve', rotorSpin, { n: 'Clutch sleeve', g: 'body', inside: true, ex: [6.1, 0, 0], pin: [0.35, 0.4, 0],
   t: 'A hardened collar on the pinion that the clutch rollers grip. It turns with the rotor.' });
-mesh(g, ring('x', 0.05, 0.21, 0.4, 0.5, 32), MAT.silver());
+mesh(g, ring('x', 0.08, 0.21, 0.4, 0.54, 48), MAT.silver());
 
-g = def('bearingPF', root, { n: 'Pinion bearing, front', g: 'body', inside: true, at: [-0.1, 0, 0], ex: [4.4, 0, 0], pin: [0, 0.55, 0],
+g = def('bearingPF', root, { n: 'Pinion bearing, front', g: 'body', inside: true, at: [-0.14, 0, 0], ex: [5.7, 0, 0], pin: [0, 0.55, 0],
   t: 'Supports the front of the pinion gear. Daiwa lists two stainless ball bearings on the pinion.' });
 bearing(g, 'x', 0.55, 0.22);
 
-g = def('pinion', rotorSpin, { n: 'Pinion gear', g: 'body', inside: true, ex: [2.2, 0, 0], pin: [-0.72, 0.36, 0.1],
+g = def('pinion', rotorSpin, { n: 'Pinion gear', g: 'body', inside: true, ex: [2.2, 0, 0], pin: [-0.7, 0.36, 0.1],
   t: 'A hollow gear on the reel’s centre line. The drive gear spins it, it spins the rotor, and the main shaft slides through its middle.' });
-mesh(g, cylX(0.3, -1.35, -0.2, 24), MAT.brass());
-mesh(g, cylX(0.2, -1.62, 1.82, 24), MAT.brass());
+mesh(g, cylX(0.3, -1.3, -0.26, 48), MAT.brass());
+mesh(g, cylX(0.2, -1.62, 2.92, 48), MAT.brass());
 (function () {
-  var tooth = new T.BoxGeometry(1.1, 0.1, 0.12), m = MAT.brass();
+  var tooth = new T.BoxGeometry(1.0, 0.1, 0.12), m = MAT.brass();
   for (var k = 0; k < 9; k++) { var a = k / 9 * Math.PI * 2; mesh(g, tooth, m, [-0.78, Math.cos(a) * 0.34, Math.sin(a) * 0.34], [a + Math.PI / 2, 0.12, 0]); }
 })();
 
-g = def('bearingPR', root, { n: 'Pinion bearing, rear', g: 'body', inside: true, at: [-1.5, 0, 0], ex: [0, 0, 0], pin: [0, 0.5, 0],
+g = def('bearingPR', root, { n: 'Pinion bearing, rear', g: 'body', inside: true, at: [-1.45, 0, 0], ex: [0, 0, 0], pin: [0, 0.42, 0],
   t: 'Supports the back of the pinion gear inside the body.' });
-bearing(g, 'x', 0.5, 0.2);
+bearing(g, 'x', 0.42, 0.2);
 
-g = def('shaft', osc, { n: 'Main shaft', g: 'body', inside: true, ex: [0, 0, 0], pin: [-2.2, 0.11, 0],
+g = def('shaft', osc, { n: 'Main shaft', g: 'body', inside: true, ex: [0, 0, 0], pin: [-2.1, 0.11, 0],
   t: 'Runs from the back of the body through the pinion to the spool. It does not rotate. It slides forward and back as you wind, which lays the line evenly.',
   f: [['Family', 'Airdrive shaft']] });
-mesh(g, cylX(0.11, -3.25, 4.2, 20), MAT.silver());
-mesh(g, cylX(0.09, 4.2, 4.5, 16), MAT.steel());
+mesh(g, cylX(0.11, -3.3, 6.0, 32), MAT.silver());
+mesh(g, cylX(0.09, 6.0, 6.36, 24), MAT.steel());
 
-g = def('gear', handleSpin, { n: 'Drive gear', g: 'body', inside: true, ex: [0, 0, 2.4], pin: [0.9, 0.9, 0.66], v: [2.6, 1.15],
+g = def('gear', handleSpin, { n: 'Drive gear', g: 'body', inside: true, ex: [0, 0, 2.6], pin: [0.95, 0.95, 0.7], v: [2.6, 1.15],
   t: 'The large gear turned directly by the handle. The teeth on its face mesh with the pinion and set the 5.7 : 1 ratio. The small gear on its shaft drives the oscillation.',
   f: [['Ratio', '5.7 : 1'], ['Support', '2 ball bearings']] });
-mesh(g, cylZ(1.5, 0.46, 0.66, 64), MAT.silver());
-mesh(g, cylZ(0.26, -0.92, 0.98, 24), MAT.steel());
-mesh(g, cylZ(0.3, -0.64, -0.44, 20), MAT.brass());
+mesh(g, latheZ([[0.5, 0.22], [0.5, 1.5], [0.54, 1.55], [0.66, 1.55], [0.7, 1.5], [0.7, 0.22]], 128), MAT.silver());
+mesh(g, cylZ(0.22, -1.0, 1.02, 40), MAT.steel());
+mesh(g, cylZ(0.3, -0.78, -0.56, 32), MAT.brass());
 (function () {
-  var tooth = new T.BoxGeometry(0.3, 0.085, 0.16), m = MAT.silver();
-  for (var k = 0; k < 44; k++) { var a = k / 44 * Math.PI * 2; mesh(g, tooth, m, [Math.cos(a) * 1.33, Math.sin(a) * 1.33, 0.38], [0, 0, a]); }
+  var tooth = new T.BoxGeometry(0.3, 0.075, 0.16), m = MAT.silver();
+  for (var k = 0; k < 52; k++) { var a = k / 52 * Math.PI * 2; mesh(g, tooth, m, [Math.cos(a) * 1.38, Math.sin(a) * 1.38, 0.42], [0, 0, a]); }
 })();
 
-g = def('bearingGA', root, { n: 'Drive gear bearing, plate side', g: 'body', inside: true, at: [GX, GY, 0.82], ex: [0, 0, 3.6], pin: [0, 0.5, 0],
+g = def('bearingGA', root, { n: 'Drive gear bearing, plate side', g: 'body', inside: true, at: [GX, GY, 0.86], ex: [0, 0, 3.9], pin: [0, 0.48, 0],
   t: 'Sits in the side plate and carries the handle end of the drive gear.' });
-bearing(g, 'z', 0.5, 0.2);
+bearing(g, 'z', 0.48, 0.2);
 
-g = def('oring', root, { n: 'Side plate seal', g: 'body', inside: true, at: [GX, GY, 0], ex: [0, 0, 4.3], pin: [0, 1.5, 0.92],
+g = def('oring', root, { n: 'Side plate seal', g: 'body', inside: true, at: [GX, GY, 0], ex: [0, 0, 4.6], pin: [0, 1.62, 0.99],
   t: 'An O-ring between the side plate and the body that keeps water out of the gear box.' });
-mesh(g, torusZ(1.5, 0.04, 0.92), MAT.rubber());
+mesh(g, torusZ(1.62, 0.04, 0.99), MAT.rubber());
 
-g = def('plate', root, { n: 'Side plate', g: 'body', shell: true, at: [GX, GY, 0], ex: [0, 0, 5.0], pin: [1.0, 0.85, 1.12], v: [2.9, 1.35],
+g = def('plate', root, { n: 'Side plate', g: 'body', shell: true, at: [GX, GY, 0], ex: [0, 0, 5.4], pin: [1.05, 0.9, 1.2], v: [2.9, 1.35],
   t: 'A large round plate that screws into the body like a lid. It closes the gear box and supports the drive gear. The turquoise ring marks its edge.' });
-mesh(g, cylZ(1.62, 0.93, 1.1, 72), MAT.silver());
-mesh(g, torusZ(1.57, 0.06, 1.08), MAT.teal());
-mesh(g, torusZ(1.25, 0.012, 1.1), MAT.steel()); mesh(g, torusZ(1.0, 0.012, 1.1), MAT.steel());
-mesh(g, cylZ(0.72, 1.1, 1.28), MAT.silver());
+mesh(g, latheZ([[1.0, 1.7], [1.12, 1.7], [1.17, 1.66], [1.19, 1.56], [1.19, 1.3], [1.22, 1.24], [1.25, 1.12], [1.3, 1.02], [1.33, 0.84], [1.39, 0.74], [1.47, 0.66], [1.5, 0.56], [1.5, 0.3]], 192), MAT.silver());
+mesh(g, torusZ(1.64, 0.075, 1.14), MAT.teal());
+mesh(g, torusZ(1.42, 0.012, 1.19), MAT.steel());
 
-g = def('bearingGB', root, { n: 'Drive gear bearing, body side', g: 'body', inside: true, at: [GX, GY, -0.82], ex: [0, 0, -1.4], pin: [0, 0.5, 0], v: GROUPS.osc.view,
+g = def('bearingGB', root, { n: 'Drive gear bearing, body side', g: 'body', inside: true, at: [GX, GY, -0.9], ex: [0, 0, -1.5], pin: [0, 0.48, 0], v: GROUPS.osc.view,
   t: 'Sits in the closed side of the body and carries the far end of the drive gear.' });
-bearing(g, 'z', 0.5, 0.2);
+bearing(g, 'z', 0.48, 0.2);
 
-g = def('cap', root, { n: 'Handle screw cap', g: 'body', at: [GX, GY, 0], ex: [0, 0, -2.4], pin: [0, 0.4, -1.3], v: GROUPS.osc.view,
+g = def('cap', root, { n: 'Handle screw cap', g: 'body', at: [GX, GY, 0], ex: [0, 0, -2.6], pin: [0, 0.4, -1.45], v: GROUPS.osc.view,
   t: 'Covers the unused end of the drive gear. Swap it with the handle to change between left-hand and right-hand winding.' });
-mesh(g, cylZ(0.55, -1.26, -1.02), MAT.silver());
-mesh(g, torusZ(0.5, 0.035, -1.26), MAT.teal());
+mesh(g, latheZ(curve([[-BODY_HALF, 0.62], [-1.3, 0.6], [-1.4, 0.5], [-1.44, 0.3], [-1.45, 0]], 24), 96), MAT.silver());
+mesh(g, torusZ(0.58, 0.035, -1.22), MAT.teal());
 
 /* --- Oscillation ------------------------------------------------------- */
-var OX = -2.75, OY = -0.75;
-g = def('oscGear', root, { n: 'Oscillation gear', g: 'osc', inside: true, at: [OX, OY, 0], ex: [-0.4, -2.8, 0], pin: [0.45, 0.45, -0.48],
+var OX = -2.75, OY = 0.2;
+g = def('oscGear', root, { n: 'Oscillation gear', g: 'osc', inside: true, at: [OX, OY, 0], ex: [-0.6, -3.6, 0], pin: [0.6, 0.6, -0.6],
   t: 'Driven by the small gear on the drive shaft. The pin on its face travels in a circle and pushes the slider back and forth.' });
 var oscSpin = new T.Group(); g.add(oscSpin);
-mesh(oscSpin, cylZ(0.7, -0.62, -0.48, 40), MAT.brass());
-mesh(oscSpin, cylZ(0.09, -0.48, -0.22, 12), MAT.steel(), [0, -STROKE, 0]);
-mesh(oscSpin, cylZ(0.12, -0.8, -0.4, 12), MAT.steel());
+mesh(oscSpin, ring('z', -0.76, 0.1, 1.0, 0.16, 96), MAT.brass());
+mesh(oscSpin, cylZ(0.09, -0.6, -0.34, 20), MAT.steel(), [0, -STROKE, 0]);
+mesh(oscSpin, cylZ(0.12, -0.95, -0.5, 20), MAT.steel());
 
-g = def('slider', osc, { n: 'Oscillation slider', g: 'osc', inside: true, ex: [-2.6, 0, 0], pin: [OX, -0.2, -0.22],
+g = def('slider', osc, { n: 'Oscillation slider', g: 'osc', inside: true, ex: [-2.2, 0, 0], pin: [OX, 0.6, -0.36],
   t: 'Clamped to the back of the main shaft. Its slot rides on the oscillation gear’s pin, turning the gear’s rotation into the in-and-out stroke of the spool.' });
-mesh(g, new T.BoxGeometry(0.3, 1.6, 0.12), MAT.steel(), [OX, OY, -0.28]);
-mesh(g, new T.BoxGeometry(0.5, 0.42, 0.42), MAT.steel(), [OX, 0, -0.05]);
-screwZ(g, [OX, 0, 0.16], 1);
+mesh(g, new T.BoxGeometry(0.3, 2.0, 0.12), MAT.steel(), [OX, OY, -0.42]);
+mesh(g, new T.BoxGeometry(0.5, 0.42, 0.5), MAT.steel(), [OX, 0, -0.12]);
+screwZ(g, [OX, 0, 0.13], 1);
 
-g = def('rod', root, { n: 'Slider guide', g: 'osc', inside: true, ex: [-3.6, 1.0, 0], pin: [-2.0, 0.55, -0.3],
+g = def('rod', root, { n: 'Slider guide', g: 'osc', inside: true, ex: [-1.0, 0, -2.4], pin: [-2.0, -0.6, -0.3],
   t: 'A pin fixed in the body that keeps the slider running straight.' });
-mesh(g, cylX(0.06, -3.4, -0.5, 12), MAT.silver(), [0, 0.55, -0.3]);
+mesh(g, cylX(0.06, -3.4, -0.5, 16), MAT.silver(), [0, -0.6, -0.3]);
 
 /* --- Handle ------------------------------------------------------------ */
-g = def('collar', handleSpin, { n: 'Handle collar', g: 'handle', ex: [0, 0, 6.0], pin: [0, 0.5, 1.4],
+g = def('collar', handleSpin, { n: 'Handle collar', g: 'handle', ex: [0, 0, 6.4], pin: [0, 0.5, 1.6],
   t: 'A sealing collar between the handle and the side plate.' });
-mesh(g, ring('z', 1.28, 0.3, 0.5, 0.2, 32), MAT.dark());
+mesh(g, ring('z', 1.5, 0.3, 0.5, 0.14, 48), MAT.black());
 
-g = def('handle', handleSpin, { n: 'Handle', g: 'handle', ex: [0, 0, 7.0], pin: [0, -2.7, 2.04],
+g = def('handle', handleSpin, { n: 'Handle', g: 'handle', ex: [0, 0, 7.4], pin: [0, -2.7, 2.45],
   t: 'A machined arm that screws straight into the drive gear, so there is no play between hand and gear. The H in the model name marks the high-speed 5.7 : 1 ratio.',
   f: [['Length', '55 mm'], ['Gear ratio', '5.7 : 1'], ['Side', 'Swappable left / right']] });
 (function () {
-  mesh(g, cylZ(0.34, 1.3, 1.9), MAT.silver());
-  var s = new T.Shape();
-  s.moveTo(0.5, 0); s.absarc(0, 0, 0.5, 0, Math.PI, false);
-  s.lineTo(-0.3, -ARM); s.absarc(0, -ARM, 0.3, Math.PI, Math.PI * 2, false); s.closePath();
-  mesh(g, extrude(s, 0.14, 0.04), MAT.silver(), [0, 0, 1.93]);
-  mesh(g, cylZ(0.3, 2.0, 2.1), MAT.silver());
-  mesh(g, cylZ(0.11, 1.95, 3.25, 16), MAT.steel(), [0, -ARM, 0]);
+  mesh(g, latheZ(curve([[1.64, 0.4], [1.72, 0.56], [1.9, 0.6], [2.06, 0.52], [2.16, 0.32], [2.18, 0]], 40), 96), MAT.silver());
+  mesh(g, rodBetween([0, 0, 1.92], [0, -ARM, 2.5], 0.3, 0.2), MAT.silver());
+  mesh(g, new T.SphereGeometry(0.2, 32, 24), MAT.silver(), [0, -ARM, 2.5]);
+  mesh(g, cylZ(0.11, 2.5, 3.95, 24), MAT.steel(), [0, -ARM, 0]);
+  mesh(g, ring('z', 2.6, 0.11, 0.26, 0.12, 32), MAT.silver(), [0, -ARM, 0]);
 })();
 
-g = def('knobBearingA', handleSpin, { n: 'Knob bearing, inner', g: 'handle', inside: true, at: [0, -ARM, 2.5], ex: [0, 0, 8.2], pin: [0, 0.3, 0],
+g = def('knobBearingA', handleSpin, { n: 'Knob bearing, inner', g: 'handle', inside: true, at: [0, -ARM, 2.95], ex: [0, 0, 9.2], pin: [0, 0.3, 0],
   t: 'One of two ball bearings the knob spins on.' });
 bearing(g, 'z', 0.3, 0.16);
 
-g = def('knob', handleSpin, { n: 'Handle knob', g: 'handle', shell: true, at: [0, -ARM, 0], ex: [0, 0, 9.2], pin: [0, 1.2, 3.25],
+g = def('knob', handleSpin, { n: 'Handle knob', g: 'handle', shell: true, at: [0, -ARM, 0], ex: [0, 0, 10.2], pin: [0, 1.15, 3.85],
   t: 'A round, flat knob that is easy to find without looking and comfortable to pinch through a long session of jerks and fast slack recovery.' });
-mesh(g, latheZ([[2.36, 0.42], [2.4, 1.15], [2.56, 1.46], [2.86, 1.56], [3.16, 1.46], [3.32, 1.15], [3.34, 0.5]]), MAT.rubber());
+mesh(g, latheZ(curve([[2.76, 0.34], [2.78, 0.9], [2.9, 1.22], [3.15, 1.35], [3.55, 1.35], [3.8, 1.22], [3.93, 0.95], [3.95, 0.78]], 60), 128), MAT.rubber());
 
-g = def('knobBearingB', handleSpin, { n: 'Knob bearing, outer', g: 'handle', inside: true, at: [0, -ARM, 3.1], ex: [0, 0, 10.0], pin: [0, 0.3, 0],
+g = def('knobBearingB', handleSpin, { n: 'Knob bearing, outer', g: 'handle', inside: true, at: [0, -ARM, 3.7], ex: [0, 0, 11.2], pin: [0, 0.3, 0],
   t: 'The second knob bearing, under the cap.' });
 bearing(g, 'z', 0.3, 0.16);
 
-g = def('knobScrew', handleSpin, { n: 'Knob screw', g: 'handle', inside: true, ex: [0, 0, 10.7], pin: [0.13, -ARM, 3.3],
+g = def('knobScrew', handleSpin, { n: 'Knob screw', g: 'handle', inside: true, ex: [0, 0, 11.8], pin: [0.13, -ARM, 3.95],
   t: 'Holds the knob on its axle. It sits under the knob cap.' });
-screwZ(g, [0, -ARM, 3.25], 1);
+screwZ(g, [0, -ARM, 3.88], 1);
 
-g = def('knobCap', handleSpin, { n: 'Knob cap', g: 'handle', at: [0, -ARM, 0], ex: [0, 0, 11.3], pin: [0.3, 0.3, 3.44],
+g = def('knobCap', handleSpin, { n: 'Knob cap', g: 'handle', at: [0, -ARM, 0], ex: [0, 0, 12.5], pin: [0.4, 0.4, 4.05],
   t: 'A metal cap that closes the knob. The two holes take a pin tool for removing it.' });
-mesh(g, cylZ(0.55, 3.33, 3.43), MAT.silver());
-mesh(g, cylZ(0.07, 3.4, 3.44, 12), MAT.dark(), [0.24, 0, 0]); mesh(g, cylZ(0.07, 3.4, 3.44, 12), MAT.dark(), [-0.24, 0, 0]);
+mesh(g, latheZ(curve([[3.93, 0.8], [3.99, 0.78], [4.04, 0.6], [4.06, 0.3], [4.06, 0]], 30), 96), MAT.silver());
+mesh(g, cylZ(0.07, 4.0, 4.062, 20), MAT.black(), [0.32, 0, 0]); mesh(g, cylZ(0.07, 4.0, 4.062, 20), MAT.black(), [-0.32, 0, 0]);
 
 /* --- finish ------------------------------------------------------------ */
 // Centre lines for the exploded view, like the dashed lines on a parts diagram
@@ -679,29 +787,37 @@ var axes = new T.Group(); root.add(axes);
 (function () {
   function dashed(a, b) {
     var geo = new T.BufferGeometry().setFromPoints([new T.Vector3(a[0], a[1], a[2]), new T.Vector3(b[0], b[1], b[2])]);
-    var l = new T.Line(geo, new T.LineDashedMaterial({ color: 0x16b5a8, dashSize: 0.3, gapSize: 0.2, transparent: true, opacity: 0 }));
+    var l = new T.Line(geo, new T.LineDashedMaterial({ color: 0x13a6a6, dashSize: 0.3, gapSize: 0.2, transparent: true, opacity: 0 }));
     l.computeLineDistances(); axes.add(l);
   }
-  dashed([-6.5, 0, 0], [24, 0, 0]);
-  dashed([GX, GY, -4], [GX, GY, 15.2]);
-  dashed([GX + Math.sin(HANDLE_REST) * ARM, GY - Math.cos(HANDLE_REST) * ARM, 8.5], [GX + Math.sin(HANDLE_REST) * ARM, GY - Math.cos(HANDLE_REST) * ARM, 15.2]);
+  var kx = GX + Math.sin(HANDLE_REST) * ARM, ky = GY - Math.cos(HANDLE_REST) * ARM;
+  dashed([-6.5, 0, 0], [28.5, 0, 0]);
+  dashed([GX, GY, -4.4], [GX, GY, 17.4]);
+  dashed([kx, ky, 9.6], [kx, ky, 17.4]);
 })();
 
 ORDER.sort(function (a, b) { return GROUP_ORDER.indexOf(INFO[a].group) - GROUP_ORDER.indexOf(INFO[b].group); });
 var pickables = [];
+root.updateMatrixWorld(true);
 ORDER.forEach(function (id) {
   var p = P[id]; p.base = p.g.position.clone();
+  var size = new T.Box3(), inv = new T.Matrix4().copy(p.g.matrixWorld).invert(), rel = new T.Matrix4(), bb = new T.Box3();
   p.g.traverse(function (o) {
     if (!o.isMesh) return;
     o.userData.part = id; o.material = o.material.clone();
     p.meshes.push(o); pickables.push(o);
+    o.geometry.computeBoundingBox();
+    size.union(bb.copy(o.geometry.boundingBox).applyMatrix4(rel.multiplyMatrices(inv, o.matrixWorld)));
   });
+  // approximate envelope of the part in millimetres, largest dimension first
+  var d = size.getSize(new T.Vector3()).toArray().sort(function (a, b) { return b - a; }).map(function (v) { v *= 10; return v >= 10 ? String(Math.round(v)) : v.toFixed(1); });
+  INFO[id].facts = INFO[id].facts.concat([['Approx. size', d.join(' × ') + ' mm']]);
 });
 
 /* ---------------------------------------------------------------- camera */
-var cur = { target: new T.Vector3(), r: 30, theta: 2.72, phi: 1.36 };
-var goal = { target: new T.Vector3(), r: 30, theta: 2.72, phi: 1.36 };
-var home = { target: new T.Vector3(), r: 30, theta: 2.72, phi: 1.36 };
+var cur = { target: new T.Vector3(), r: 30, theta: 2.84, phi: 1.44 };
+var goal = { target: new T.Vector3(), r: 30, theta: 2.84, phi: 1.44 };
+var home = { target: new T.Vector3(), r: 30, theta: 2.84, phi: 1.44 };
 var R_MIN = 1.2, R_MAX = 220;
 var view = { w: 1, h: 1, offX: 0, offY: 0, fx: 1, fy: 1 };
 var box = new T.Box3(), sph = new T.Sphere(), v3 = new T.Vector3();
@@ -722,7 +838,8 @@ function computeHome() {
   pickables.forEach(function (m) { box.expandByObject(m); });
   box.getBoundingSphere(sph);
   home.target.copy(sph.center);
-  home.r = Math.min(R_MAX, fitRadius(sph.radius * 0.86));
+  home.r = Math.min(R_MAX, fitRadius(sph.radius * 0.9));
+  fitShadow(sph.center, sph.radius * 1.05);
 }
 function goHome(instant) {
   computeHome();
@@ -758,6 +875,7 @@ function resize() {
     freeH = Math.max(160, bottom - top); view.offY = (h - (top + bottom)) / 2;
   }
   view.fx = freeW / h; view.fy = freeH / h;
+  scaleEl.style.bottom = (pr.height > h * 0.6 ? 18 : Math.round(ar.bottom - pr.top + 10)) + 'px';
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.setViewOffset(w, h, view.offX, view.offY, w, h);
@@ -779,11 +897,11 @@ function pickAt(clientX, clientY) {
 }
 function paint() {
   ORDER.forEach(function (id) {
-    var p = P[id], hex = id === state.selected ? 0x0a5049 : (id === state.hover ? 0x06302c : 0x000000);
+    var p = P[id], hex = id === state.selected ? 0x0a4a48 : (id === state.hover ? 0x052a29 : 0x000000);
     var ghost = state.xray && p.shell;
     p.meshes.forEach(function (m) {
       m.material.emissive.setHex(hex);
-      m.material.transparent = ghost; m.material.opacity = ghost ? 0.13 : 1; m.material.depthWrite = !ghost;
+      m.material.transparent = ghost; m.material.opacity = ghost ? 0.13 : 1; m.material.depthWrite = !ghost; m.castShadow = !ghost;
       m.renderOrder = ghost ? 2 : 0;
     });
   });
@@ -957,7 +1075,7 @@ document.getElementById('explode').addEventListener('input', function (e) {
   state.explode = e.target.value / 100; applyExplode(); syncPins();
   if (!state.selected) {      // swing round to a three-quarter view as the parts spread out
     computeHome(); goal.target.copy(home.target); goal.r = home.r;
-    goal.theta = nearestAngle(home.theta - 0.62 * state.explode, cur.theta); goal.phi = home.phi - 0.3 * state.explode;
+    goal.theta = nearestAngle(home.theta - 0.74 * state.explode, cur.theta); goal.phi = home.phi - 0.38 * state.explode;
   }
 });
 function applyExplode() {
@@ -974,6 +1092,16 @@ function pose() {
   oscSpin.rotation.z = b; osc.position.x = Math.sin(b) * STROKE;
 }
 
+// Scale bar: true size at the distance of the point the camera is looking at
+var scaleEl = document.getElementById('scale'), scaleBar = scaleEl.firstChild, scaleText = scaleEl.lastChild, scaleShown = 0;
+function updateScale() {
+  var pxPerMm = view.h / (2 * cur.r * Math.tan(camera.fov * Math.PI / 360)) / 10;
+  var steps = [1, 2, 5, 10, 20, 50, 100, 200], mm = steps[steps.length - 1];
+  for (var i = 0; i < steps.length; i++) if (steps[i] * pxPerMm >= 56) { mm = steps[i]; break; }
+  var w = Math.round(mm * pxPerMm);
+  if (w === scaleShown) return; scaleShown = w;
+  scaleBar.style.width = w + 'px'; scaleText.textContent = mm + ' mm';
+}
 var resizeQueued = false;
 function resizeSoon() { if (resizeQueued) return; resizeQueued = true; requestAnimationFrame(function () { resizeQueued = false; resize(); }); }
 window.addEventListener('resize', function () { resize(); if (!state.selected) { computeHome(); goal.r = home.r; goal.target.copy(home.target); } });
@@ -988,7 +1116,7 @@ function frame(now) {
   cur.r += (goal.r - cur.r) * k; cur.theta += (goal.theta - cur.theta) * k; cur.phi += (goal.phi - cur.phi) * k;
   applyCamera();
   renderer.render(scene, camera);
-  updatePins();
+  updatePins(); updateScale();
   requestAnimationFrame(frame);
 }
 
