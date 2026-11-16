@@ -168,7 +168,11 @@ h1 small { display: block; font-size: .55em; font-weight: 500; letter-spacing: .
 .btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .slider { display: flex; align-items: center; gap: 12px; }
 .slider label { font: 600 13px/1 var(--font-display); letter-spacing: .08em; text-transform: uppercase; }
+.slider label { flex: none; width: 62px; }
 .slider input { flex: 1; min-width: 0; accent-color: var(--accent); }
+.slider output { flex: none; width: 124px; text-align: right; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#stage.is-crank { cursor: grab; }
+#stage.is-cranking { cursor: grabbing; }
 .note { margin: 0; font-size: 11.5px; line-height: 1.35; color: var(--muted); }
 .fail { position: absolute; inset: 40% var(--gutter-r) auto var(--gutter-l); text-align: center; color: var(--muted); }
 
@@ -231,6 +235,11 @@ h1 small { display: block; font-size: .55em; font-weight: 500; letter-spacing: .
       <div class="slider">
         <label for="explode">Explode</label>
         <input id="explode" type="range" min="0" max="100" value="0">
+      </div>
+      <div class="slider">
+        <label for="speed">Speed</label>
+        <input id="speed" type="range" min="5" max="300" step="5" value="50">
+        <output id="speed-out" for="speed"></output>
       </div>
       <p class="note">Modelled in code, not Daiwa CAD. Sizes are scaled from the product photo and are approximate. Part numbers are this page’s own. Not affiliated with Daiwa.</p>
     </div>
@@ -460,7 +469,7 @@ function def(id, parent, o) {
 }
 
 var GX = -1.57, GY = 0.75;   // drive gear / handle axis: 7.5 mm above the spool axis
-var ARM = 5.5, HANDLE_REST = 0.615, ROTOR_REST = Math.PI / 2, STROKE = 0.75;
+var ARM = 5.5, HANDLE_REST = 0.615, ROTOR_REST = Math.PI / 2, STROKE = 0.69;
 var BODY_R = 2.05, BODY_HALF = 1.15;
 
 var osc = new T.Group(); root.add(osc);                 // everything that slides with the main shaft
@@ -524,24 +533,24 @@ mesh(g, ring('x', 3.48, 0.12, 0.42, 0.03, 48), MAT.silver());
 mesh(g, ring('x', 3.53, 0.12, 0.42, 0.03, 48), MAT.brass());
 
 /* --- Rotor and bail ---------------------------------------------------- */
-g = def('nut', rotorSpin, { n: 'Rotor nut', g: 'rotor', inside: true, ex: [11.5, 0, 0], pin: [2.76, 0.42, 0],
+g = def('nut', rotorSpin, { n: 'Rotor nut', g: 'rotor', inside: true, ex: [12.8, 0, 0], pin: [1.4, 0.42, 0],
   t: 'Clamps the rotor onto the pinion gear. It hides under the spool.' });
-var hex = new T.CylinderGeometry(0.44, 0.44, 0.22, 6); hex.rotateZ(-Math.PI / 2); hex.translate(2.78, 0, 0);
+var hex = new T.CylinderGeometry(0.44, 0.44, 0.22, 6); hex.rotateZ(-Math.PI / 2); hex.translate(1.42, 0, 0);
 mesh(g, hex, MAT.steel());
 
-g = def('nutLock', rotorSpin, { n: 'Rotor nut lock', g: 'rotor', inside: true, ex: [11.95, 0, 0], pin: [2.95, 0.55, 0],
+g = def('nutLock', rotorSpin, { n: 'Rotor nut lock', g: 'rotor', inside: true, ex: [13.25, 0, 0], pin: [1.6, 0.55, 0],
   t: 'A small plate and screw that stop the rotor nut from backing off with vibration.' });
-mesh(g, new T.BoxGeometry(0.05, 1.3, 0.5), MAT.black(), [2.93, 0.25, 0]);
-mesh(g, cylX(0.11, 2.95, 3.02, 24), MAT.steel(), [0, 0.72, 0]);
+mesh(g, new T.BoxGeometry(0.05, 1.3, 0.5), MAT.black(), [1.57, 0.25, 0]);
+mesh(g, cylX(0.11, 1.59, 1.66, 24), MAT.steel(), [0, 0.72, 0]);
 
-g = def('rotor', rotorSpin, { n: 'Rotor', g: 'rotor', shell: true, ex: [9.3, 0, 0], pin: [0.8, 0, -2.47],
+g = def('rotor', rotorSpin, { n: 'Rotor', g: 'rotor', shell: true, ex: [9.3, 0, 0], pin: [0.7, 0, -2.05],
   t: 'Spins around the spool and carries the bail. Each handle turn takes it round 5.7 times. The open arms keep it light so it starts and stops quickly.',
   f: [['Speed', '5.7 turns per handle turn'], ['Retrieve', '80 cm per handle turn'], ['Family', 'Airdrive rotor']] });
-mesh(g, latheX([[0.08, 1.25], [0.08, 2.3], [0.14, 2.4], [0.26, 2.45], [1.45, 2.45], [1.56, 2.38], [1.64, 2.1], [1.7, 2.04], [2.5, 2.02], [2.6, 1.94], [2.66, 1.8], [2.66, 0.5]], 160), MAT.body());
-mesh(g, torusX(2.45, 0.035, 0.4), MAT.teal());
+mesh(g, latheX([[0.05, 1.25], [0.05, 2.44], [0.08, 2.5], [0.14, 2.5], [0.17, 2.44], [0.19, 2.1], [0.25, 2.04], [1.16, 2.02], [1.26, 1.94], [1.3, 1.8], [1.3, 0.5]], 160), MAT.body());
+mesh(g, torusX(2.5, 0.03, 0.11), MAT.teal());
 (function () {
   // One arm, drawn in the plane through the axis: [x, radius]. The inner edge clears the spool skirt.
-  var arm = splineShape([[0.2, 2.3], [0.42, 2.9], [1.3, 3.14], [2.5, 3.12], [3.3, 3.04], [3.6, 2.86], [3.56, 2.62], [3.0, 2.56], [1.9, 2.56], [1.25, 2.5], [0.9, 2.2], [0.5, 2.1]]);
+  var arm = splineShape([[0.1, 2.2], [0.24, 2.86], [1.3, 3.14], [2.5, 3.12], [3.3, 3.04], [3.6, 2.86], [3.56, 2.62], [3.0, 2.56], [1.9, 2.56], [1.0, 2.55], [0.5, 2.52], [0.22, 2.44]]);
   var win = new T.CatmullRomCurve3([[1.45, 2.74], [1.55, 2.94], [2.4, 2.95], [3.0, 2.88], [3.05, 2.74], [2.4, 2.72]].map(function (p) { return new T.Vector3(p[0], p[1], 0); }), true, 'centripetal').getPoints(60);
   var hole = new T.Path(); win.forEach(function (v, k) { if (k) hole.lineTo(v.x, v.y); else hole.moveTo(v.x, v.y); }); hole.closePath();
   arm.holes.push(hole);
@@ -675,7 +684,7 @@ bearing(g, 'x', 0.55, 0.22);
 g = def('pinion', rotorSpin, { n: 'Pinion gear', g: 'body', inside: true, ex: [2.2, 0, 0], pin: [-0.7, 0.36, 0.1],
   t: 'A hollow gear on the reel’s centre line. The drive gear spins it, it spins the rotor, and the main shaft slides through its middle.' });
 mesh(g, cylX(0.3, -1.3, -0.26, 48), MAT.brass());
-mesh(g, cylX(0.2, -1.62, 2.92, 48), MAT.brass());
+mesh(g, cylX(0.2, -1.62, 1.56, 48), MAT.brass());
 (function () {
   var tooth = new T.BoxGeometry(1.0, 0.1, 0.12), m = MAT.brass();
   for (var k = 0; k < 9; k++) { var a = k / 9 * Math.PI * 2; mesh(g, tooth, m, [-0.78, Math.cos(a) * 0.34, Math.sin(a) * 0.34], [a + Math.PI / 2, 0.12, 0]); }
@@ -688,7 +697,7 @@ bearing(g, 'x', 0.42, 0.2);
 g = def('shaft', osc, { n: 'Main shaft', g: 'body', inside: true, ex: [0, 0, 0], pin: [-2.1, 0.11, 0],
   t: 'Runs from the back of the body through the pinion to the spool. It does not rotate. It slides forward and back as you wind, which lays the line evenly.',
   f: [['Family', 'Airdrive shaft']] });
-mesh(g, cylX(0.11, -3.3, 6.0, 32), MAT.silver());
+mesh(g, cylX(0.11, -3.0, 6.0, 32), MAT.silver());
 mesh(g, cylX(0.09, 6.0, 6.36, 24), MAT.steel());
 
 g = def('gear', handleSpin, { n: 'Drive gear', g: 'body', inside: true, ex: [0, 0, 2.6], pin: [0.95, 0.95, 0.7], v: [2.6, 1.15],
@@ -734,11 +743,11 @@ mesh(oscSpin, ring('z', -0.76, 0.1, 1.0, 0.16, 96), MAT.brass());
 mesh(oscSpin, cylZ(0.09, -0.6, -0.34, 20), MAT.steel(), [0, -STROKE, 0]);
 mesh(oscSpin, cylZ(0.12, -0.95, -0.5, 20), MAT.steel());
 
-g = def('slider', osc, { n: 'Oscillation slider', g: 'osc', inside: true, ex: [-2.2, 0, 0], pin: [OX, 0.6, -0.36],
+g = def('slider', osc, { n: 'Oscillation slider', g: 'osc', inside: true, ex: [-2.2, 0, 0], pin: [OX + STROKE, 0.6, -0.36],
   t: 'Clamped to the back of the main shaft. Its slot rides on the oscillation gear’s pin, turning the gear’s rotation into the in-and-out stroke of the spool.' });
-mesh(g, new T.BoxGeometry(0.3, 2.0, 0.12), MAT.steel(), [OX, OY, -0.42]);
-mesh(g, new T.BoxGeometry(0.5, 0.42, 0.5), MAT.steel(), [OX, 0, -0.12]);
-screwZ(g, [OX, 0, 0.13], 1);
+mesh(g, new T.BoxGeometry(0.3, 2.0, 0.12), MAT.steel(), [OX + STROKE, OY, -0.42]);
+mesh(g, new T.BoxGeometry(0.5, 0.42, 0.5), MAT.steel(), [OX + STROKE, 0, -0.12]);
+screwZ(g, [OX + STROKE, 0, 0.13], 1);
 
 g = def('rod', root, { n: 'Slider guide', g: 'osc', inside: true, ex: [-1.0, 0, -2.4], pin: [-2.0, -0.6, -0.3],
   t: 'A pin fixed in the body that keeps the slider running straight.' });
@@ -884,7 +893,7 @@ function resize() {
 
 /* ------------------------------------------------------------ interaction */
 var raycaster = new T.Raycaster(), ndc = new T.Vector2();
-var state = { selected: null, hover: null, xray: false, spin: false, pins: true, explode: 0, angle: 0 };
+var state = { selected: null, hover: null, xray: false, spin: false, pins: true, explode: 0, angle: 0, speed: 0.5 };
 
 function visiblePick(m) { return !(state.xray && P[m.userData.part].shell); }
 function pickAt(clientX, clientY) {
@@ -919,7 +928,7 @@ function renderDetail() {
   if (!id) {
     detail.innerHTML = '<p class="kicker">Explore</p><h2>Pick a part</h2>' +
       '<p class="lead">Click any part of the reel or choose one below and the camera flies in. Slide Explode to pull all ' + ORDER.length + ' parts apart like a parts diagram.</p>' +
-      '<p>Scroll or pinch to zoom toward the pointer. Drag to orbit. Right-drag or two-finger drag to pan.</p>';
+      '<p>Scroll or pinch to zoom toward the pointer. Drag to orbit. Right-drag or two-finger drag to pan. Drag the handle or its knob to wind the reel by hand.</p>';
   } else {
     var d = INFO[id];
     detail.innerHTML = '<p class="kicker">No. ' + (ORDER.indexOf(id) + 1) + ' &middot; ' + esc(GROUPS[d.group].label) + '</p><h2>' + esc(d.name) + '</h2><p class="lead">' + esc(d.text) + '</p>' +
@@ -993,6 +1002,25 @@ function occlude(id) {
 
 // Pointer orbit / pan / pinch, click to select
 var pointers = new Map(), drag = null, tip = document.getElementById('tip');
+var CRANK_PARTS = { handle: 1, knob: 1, knobCap: 1 }, crank = null, hub = new T.Vector3(), probe = new T.Vector3();
+function screenOf(v) { v.project(camera); return [(v.x * 0.5 + 0.5) * view.w, (-v.y * 0.5 + 0.5) * view.h]; }
+function crankStart(e) {
+  var r = canvas.getBoundingClientRect();
+  handleSpin.getWorldPosition(hub);
+  var c = screenOf(hub.clone());
+  // which way does the knob move on screen when the handle winds forward?
+  var p0 = screenOf(handleSpin.localToWorld(probe.set(0, -ARM, 2.5)).clone());
+  handleSpin.rotation.z -= 0.05; handleSpin.updateMatrixWorld(true);
+  var p1 = screenOf(handleSpin.localToWorld(probe.set(0, -ARM, 2.5)).clone());
+  handleSpin.rotation.z += 0.05; handleSpin.updateMatrixWorld(true);
+  var d = Math.atan2(p1[1] - c[1], p1[0] - c[0]) - Math.atan2(p0[1] - c[1], p0[0] - c[0]);
+  crank = { cx: c[0] + r.left, cy: c[1] + r.top, sign: Math.sin(d) >= 0 ? 1 : -1, last: Math.atan2(e.clientY - (c[1] + r.top), e.clientX - (c[0] + r.left)) };
+}
+function crankMove(e) {
+  var a = Math.atan2(e.clientY - crank.cy, e.clientX - crank.cx), d = a - crank.last;
+  if (d > Math.PI) d -= Math.PI * 2; else if (d < -Math.PI) d += Math.PI * 2;
+  crank.last = a; state.angle += d * crank.sign; pose();
+}
 function pan(dx, dy) {
   var k = 2 * cur.r * Math.tan(camera.fov * Math.PI / 360) / view.h;
   var e = camera.matrixWorld.elements;
@@ -1010,6 +1038,11 @@ canvas.addEventListener('pointerdown', function (e) {
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   drag = { x0: e.clientX, y0: e.clientY, moved: 0, pan: e.button === 2 || e.button === 1 || e.shiftKey, t: performance.now(), multi: pointers.size > 1 };
   canvas.classList.add('is-dragging'); tip.hidden = true;
+  crank = null;
+  if (pointers.size === 1 && !drag.pan && state.explode < 0.05) {
+    var grabbed = pickAt(e.clientX, e.clientY);
+    if (grabbed && CRANK_PARTS[grabbed.object.userData.part]) { crankStart(e); canvas.classList.add('is-cranking'); }
+  }
 });
 canvas.addEventListener('pointermove', function (e) {
   var p = pointers.get(e.pointerId);
@@ -1021,6 +1054,8 @@ canvas.addEventListener('pointermove', function (e) {
     if (d0 > 0 && d1 > 0) zoom(d0 / d1, (e.clientX + other.x) / 2, (e.clientY + other.y) / 2);
     pan(dx / 2, dy / 2);
     if (drag) drag.multi = true;
+  } else if (crank) {
+    crankMove(e);
   } else if (drag && drag.pan) {
     pan(dx, dy);
   } else {
@@ -1034,7 +1069,7 @@ function release(e) {
   if (!pointers.has(e.pointerId)) return;
   pointers.delete(e.pointerId);
   if (pointers.size === 0) {
-    canvas.classList.remove('is-dragging');
+    canvas.classList.remove('is-dragging'); canvas.classList.remove('is-cranking'); crank = null;
     if (drag && !drag.multi && drag.moved < 7 && performance.now() - drag.t < 600 && e.type === 'pointerup') {
       var hit = pickAt(e.clientX, e.clientY);
       if (hit) select(hit.object.userData.part);
@@ -1044,7 +1079,7 @@ function release(e) {
 }
 canvas.addEventListener('pointerup', release);
 canvas.addEventListener('pointercancel', release);
-canvas.addEventListener('pointerleave', function () { if (state.hover) { state.hover = null; paint(); } tip.hidden = true; canvas.classList.remove('is-over'); });
+canvas.addEventListener('pointerleave', function () { if (state.hover) { state.hover = null; paint(); } tip.hidden = true; canvas.classList.remove('is-over'); canvas.classList.remove('is-crank'); });
 canvas.addEventListener('wheel', function (e) {
   e.preventDefault();
   var dy = e.deltaY * (e.deltaMode === 1 ? 32 : 1);
@@ -1056,10 +1091,11 @@ function hover(e) {
   if (e.pointerType !== 'mouse') return;
   var now = performance.now(); if (now - hoverAt < 40) return; hoverAt = now;
   var hit = pickAt(e.clientX, e.clientY), id = hit ? hit.object.userData.part : null;
-  if (id !== state.hover) { state.hover = id; paint(); canvas.classList.toggle('is-over', !!id); }
+  var windable = !!(id && CRANK_PARTS[id] && state.explode < 0.05);
+  if (id !== state.hover) { state.hover = id; paint(); canvas.classList.toggle('is-over', !!id && !windable); canvas.classList.toggle('is-crank', windable); }
   if (id) {
     var r = app.getBoundingClientRect();
-    tip.textContent = INFO[id].name; tip.hidden = false;
+    tip.textContent = INFO[id].name + (windable ? ' · drag to wind' : ''); tip.hidden = false;
     tip.style.transform = 'translate(' + (e.clientX - r.left + 14) + 'px,' + (e.clientY - r.top + 16) + 'px)';
   } else tip.hidden = true;
 }
@@ -1068,6 +1104,14 @@ function hover(e) {
 document.getElementById('btn-home').addEventListener('click', function () { select(null); goHome(); });
 document.getElementById('btn-spin').addEventListener('click', function () { setSpin(!state.spin); });
 document.getElementById('btn-xray').addEventListener('click', function () { setXray(!state.xray); });
+(function () {
+  var input = document.getElementById('speed'), out = document.getElementById('speed-out');
+  function sync() {      // 80 cm of line per handle turn
+    state.speed = input.value / 100;
+    out.textContent = state.speed.toFixed(2) + ' turns/s · ' + Math.round(state.speed * 80) + ' cm/s';
+  }
+  input.addEventListener('input', sync); sync();
+})();
 document.getElementById('btn-pins').addEventListener('click', function (e) {
   state.pins = !state.pins; e.currentTarget.setAttribute('aria-pressed', String(state.pins)); syncPins();
 });
@@ -1089,7 +1133,8 @@ function pose() {
   var b = a * 0.55;
   handleSpin.rotation.z = HANDLE_REST - a;
   rotorSpin.rotation.x = ROTOR_REST + a * 5.7;
-  oscSpin.rotation.z = b; osc.position.x = Math.sin(b) * STROKE;
+  // the pin on the oscillation gear drives the slider: forward-most at rest, 2 x STROKE back at half a cycle
+  oscSpin.rotation.z = b + Math.PI / 2; osc.position.x = (Math.cos(b) - 1) * STROKE;
 }
 
 // Scale bar: true size at the distance of the point the camera is looking at
@@ -1110,7 +1155,7 @@ window.addEventListener('resize', function () { resize(); if (!state.selected) {
 var last = performance.now();
 function frame(now) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
-  if (state.spin) { state.angle += dt * Math.PI * 2 * 0.3; pose(); }
+  if (state.spin && !crank) { state.angle += dt * Math.PI * 2 * state.speed; pose(); }
   var k = reduceMotion ? 1 : 1 - Math.exp(-dt * 7);
   cur.target.lerp(goal.target, k);
   cur.r += (goal.r - cur.r) * k; cur.theta += (goal.theta - cur.theta) * k; cur.phi += (goal.phi - cur.phi) * k;
@@ -1123,7 +1168,7 @@ function frame(now) {
 pose(); applyExplode(); renderDetail(); syncPins(); paint();
 resize(); goHome(true); applyCamera();
 requestAnimationFrame(frame);
-window.__reel = { select: select, state: state, setXray: setXray, snap: snap };
+window.__reel = { select: select, state: state, setXray: setXray, snap: snap, pose: pose, parts: P, three: T };
 })();
 </script>
 <!--page:body-end-->
