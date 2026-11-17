@@ -2,6 +2,8 @@
 
 Interactive 3D viewers for fishing gear.
 
+**Live viewer:** https://slimsidhom.github.io/Fishing_gears/
+
 ## Reels
 
 - **Daiwa Emeraldas Air PC LT2500-H** — open `index.html` in a browser.
