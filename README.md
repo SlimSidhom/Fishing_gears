@@ -12,6 +12,10 @@ Interactive 3D viewers for fishing gear.
   parts apart along their axes like a parts diagram, X-ray shows the internals
   in place. Turn handle animates the drive train at the speed you set, or
   drag the handle with the mouse or a finger to wind it by hand.
+  Line runs from the rod guide over the line roller onto the spool, with orange
+  arrow tags showing which way it travels. Open bail flips the bail over (turning
+  the handle snaps it shut), Cut slices the shell open along the spool, and
+  Strip down takes the reel apart in a typical servicing order, step by step.
 
 The model is stylised and built from primitives in code (three.js, vendored in
 `vendor/`). It is not manufacturer CAD and proportions are approximate.

@@ -117,6 +117,28 @@ h1 small { display: block; font-size: .55em; font-weight: 500; letter-spacing: .
 }
 .scale i { display: block; height: 7px; border: 1.5px solid var(--ink); border-top: 0; }
 .scale b { font: 600 12px/1 var(--font-display); letter-spacing: .08em; font-variant-numeric: tabular-nums; }
+.linechip {
+  position: absolute; left: var(--gutter-l); bottom: 52px;
+  display: flex; align-items: center; gap: 8px;
+  font: 600 12px/1 var(--font-display); letter-spacing: .06em; text-transform: uppercase; font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 6px var(--halo), 0 0 12px var(--halo);
+}
+.linechip::before { content: ""; width: 22px; height: 3px; border-radius: 2px; background: #c8e62c; box-shadow: 9px 0 0 -0.5px #ff5a1f; }
+.linechip button {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 4px; padding: 4px 7px; cursor: pointer;
+  font: inherit; letter-spacing: .06em; text-shadow: none;
+}
+.removed { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 5px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px 4px 4px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: transparent; font-size: 13px; font-weight: 500;
+}
+.chip:hover { border-color: var(--accent); }
+.chip .n { width: 19px; height: 19px; border-radius: 50%; display: grid; place-items: center; background: var(--pin-bg); color: var(--pin-ink); font: 600 11px/1 var(--font-display); }
+.stepnav { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 6px; margin-top: 14px; }
+.btn:disabled, .slider input:disabled { opacity: .4; cursor: not-allowed; }
+.detail p.sel { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 14px; }
+.detail p.sel b { color: var(--ink); }
 .tip {
   position: absolute; left: 0; top: 0; pointer-events: none;
   background: var(--pin-bg); color: var(--pin-ink);
@@ -194,7 +216,9 @@ h1 small { display: block; font-size: .55em; font-weight: 500; letter-spacing: .
   .parts .group { display: none; }
   .part { width: auto; flex: none; padding: 6px 10px 6px 6px; border: 1px solid var(--line); white-space: nowrap; }
   .controls { padding: 8px 10px 10px; gap: 8px; }
-  .row { grid-template-columns: repeat(4, auto); }
+  .row { grid-template-columns: repeat(3, 1fr); }
+  .stepnav { margin-top: 10px; }
+  .removed { margin-top: 8px; }
   .btn { padding: 8px 6px; letter-spacing: .04em; }
   .note { display: none; }
 }
@@ -209,6 +233,7 @@ h1 small { display: block; font-size: .55em; font-weight: 500; letter-spacing: .
   <div class="pins" id="pins"></div>
   <div class="tip" id="tip" hidden></div>
   <div class="scale" id="scale" aria-hidden="true"><i></i><b>10 mm</b></div>
+  <div class="linechip" id="linechip"><span id="line-m"></span><button type="button" id="line-reset" hidden>Reset line</button></div>
 
   <header class="title">
     <p class="eyebrow">Daiwa &middot; eging spinning reel</p>
@@ -231,10 +256,16 @@ h1 small { display: block; font-size: .55em; font-weight: 500; letter-spacing: .
         <button class="btn" id="btn-spin" type="button" aria-pressed="false">Turn handle</button>
         <button class="btn" id="btn-xray" type="button" aria-pressed="false">X-ray</button>
         <button class="btn" id="btn-pins" type="button" aria-pressed="true">Labels</button>
+        <button class="btn" id="btn-bail" type="button" aria-pressed="false">Open bail</button>
+        <button class="btn" id="btn-strip" type="button" aria-pressed="false">Strip down</button>
       </div>
       <div class="slider">
         <label for="explode">Explode</label>
         <input id="explode" type="range" min="0" max="100" value="0">
+      </div>
+      <div class="slider">
+        <label for="cut">Cut</label>
+        <input id="cut" type="range" min="0" max="100" value="0">
       </div>
       <div class="slider">
         <label for="speed">Speed</label>
@@ -308,7 +339,7 @@ var camera = new T.PerspectiveCamera(30, 1, 0.1, 800);
   box(36, 10, 0, 0, 52, 2.2);        // rim light from behind
   box(24, 24, 8, -40, -20, 0.7);     // floor bounce
   var pm = new T.PMREMGenerator(renderer);
-  scene.environment = pm.fromScene(env, 0.045).texture;
+  scene.environment = pm.fromScene(env, 0.04).texture;
   pm.dispose();
 })();
 scene.add(new T.HemisphereLight(0xffffff, 0x3c4046, 0.45));
@@ -471,6 +502,7 @@ function def(id, parent, o) {
 var GX = -1.57, GY = 0.75;   // drive gear / handle axis: 7.5 mm above the spool axis
 var ARM = 5.5, HANDLE_REST = 0.615, ROTOR_REST = Math.PI / 2, STROKE = 0.69;
 var BODY_R = 2.05, BODY_HALF = 1.15;
+var GUIDE_X = 12.5, GUIDE_Y = 7.4;    // first rod guide (outside the reel, for the line)
 
 var osc = new T.Group(); root.add(osc);                 // everything that slides with the main shaft
 var rotorSpin = new T.Group(); root.add(rotorSpin);     // everything that turns with the pinion
@@ -564,7 +596,11 @@ g = def('friction', root, { n: 'Rotor friction ring', g: 'rotor', inside: true, 
 mesh(g, torusX(1.35, 0.06, 0.1), MAT.rubber());
 
 var RX = 3.85, RY = 2.85, WIRE_R = 4.5;   // line roller position on the bail arm, bail wire reach
-g = def('lever', rotorSpin, { n: 'Bail arm lever', g: 'rotor', ex: [9.3, 2.0, 0], pin: [3.5, 3.3, 0.5],
+// The bail swings open about the line through its two hinge points (roller end and holder end)
+var BAIL_OPEN = 2.97;      // about 170°: the bail flips over to the far side of the spool
+var bailPivot = new T.Group(); bailPivot.position.set(RX, 0, 0); rotorSpin.add(bailPivot);
+var bailArm = new T.Group(); bailArm.position.set(-RX, 0, 0); bailPivot.add(bailArm);
+g = def('lever', bailArm, { n: 'Bail arm lever', g: 'rotor', ex: [9.3, 2.0, 0], pin: [3.5, 3.3, 0.5],
   t: 'Pivots on the rotor arm and carries the line roller. Flipping it open releases the line for a cast.' });
 mesh(g, extrude(splineShape([[2.95, 2.95], [3.3, 3.3], [3.9, 3.34], [4.28, 3.05], [4.25, 2.62], [3.85, 2.5], [3.3, 2.62]]), 0.26, 0.09, 60), MAT.silver(), [0, 0, 0.56]);
 
@@ -572,23 +608,23 @@ g = def('leverScrew', rotorSpin, { n: 'Lever screw', g: 'rotor', ex: [9.3, 2.0, 
   t: 'The pivot screw for the bail arm lever.' });
 screwZ(g, [3.3, 2.98, 0.78], 1);
 
-g = def('collarA', rotorSpin, { n: 'Roller collar', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -0.55], pin: [0, 0.24, 0.3],
+g = def('collarA', bailArm, { n: 'Roller collar', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -0.55], pin: [0, 0.24, 0.3],
   t: 'A spacer that centres the line roller and its bearing on the lever.' });
 mesh(g, ring('z', 0.27, 0.08, 0.24, 0.07, 32), MAT.black());
 
-g = def('rollerBearing', rotorSpin, { n: 'Line roller bearing', g: 'rotor', inside: true, at: [RX, RY, 0.02], ex: [9.3, 2.0, -1.1], pin: [0, 0.17, 0],
+g = def('rollerBearing', bailArm, { n: 'Line roller bearing', g: 'rotor', inside: true, at: [RX, RY, 0.02], ex: [9.3, 2.0, -1.1], pin: [0, 0.17, 0],
   t: 'A tiny ball bearing inside the line roller. It lets the roller turn under load so the braid is not dragged across a fixed surface.' });
 bearing(g, 'z', 0.17, 0.2);
 
-g = def('roller', rotorSpin, { n: 'Line roller', g: 'rotor', shell: true, at: [RX, RY, 0], ex: [9.3, 2.0, -1.75], pin: [0, 0.3, 0],
+g = def('roller', bailArm, { n: 'Line roller', g: 'rotor', shell: true, at: [RX, RY, 0], ex: [9.3, 2.0, -1.75], pin: [0, 0.3, 0],
   t: 'The only place the line touches the reel under load. Its waisted shape keeps the braid centred and feeds it onto the spool without twist. Rinse it after salt water.' });
 mesh(g, latheZ(curve([[-0.22, 0.3], [-0.16, 0.22], [0.0, 0.19], [0.18, 0.21], [0.27, 0.3]], 30), 64), MAT.silver());
 
-g = def('collarB', rotorSpin, { n: 'Roller collar', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -2.4], pin: [0, 0.24, -0.26],
+g = def('collarB', bailArm, { n: 'Roller collar', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -2.4], pin: [0, 0.24, -0.26],
   t: 'The outer spacer, between the line roller and the end of the bail wire.' });
 mesh(g, ring('z', -0.29, 0.08, 0.24, 0.07, 32), MAT.black());
 
-g = def('wire', rotorSpin, { n: 'Bail wire', g: 'rotor', ex: [10.6, 0, -3.6], pin: [3.7, 0, -WIRE_R],
+g = def('wire', bailArm, { n: 'Bail wire', g: 'rotor', ex: [10.6, 0, -3.6], pin: [3.7, 0, -WIRE_R],
   t: 'Catches the line when you close the bail and guides it down to the roller. Thin and light so the rotor stays balanced.',
   f: [['Family', 'Airdrive bail']] });
 (function () {
@@ -643,8 +679,17 @@ g = def('body', root, { n: 'Body, stem and foot', g: 'body', shell: true, ex: [0
 })();
 // Ghost of the rod, for context only
 (function () {
-  var m = new T.Mesh(cylX(0.5, -5.5, 7.5, 48), new T.MeshStandardMaterial({ color: 0x8c949c, transparent: true, opacity: 0.14, roughness: 0.6, depthWrite: false }));
-  m.position.set(0, 8.8, 0); root.add(m);
+  var ghost = new T.MeshStandardMaterial({ color: 0x8c949c, transparent: true, opacity: 0.14, roughness: 0.6, depthWrite: false });
+  var m = new T.Mesh(cylX(0.5, -5.5, 14, 48), ghost);
+  m.position.set(0, 8.8, 0); root.add(m); m.userData.ghost = true;
+  // first rod guide, where the line comes from
+  var gm = new T.MeshStandardMaterial({ color: 0x8c949c, metalness: 0.6, roughness: 0.4, transparent: true, opacity: 0.45, depthWrite: false });
+  var ringG = new T.TorusGeometry(0.5, 0.06, 12, 48); ringG.rotateY(Math.PI / 2);
+  var gr = new T.Mesh(ringG, gm); gr.position.set(GUIDE_X, GUIDE_Y, 0); root.add(gr); gr.userData.ghost = true;
+  [-1, 1].forEach(function (k) {
+    var leg = new T.Mesh(rodBetween([GUIDE_X, GUIDE_Y + 0.5, k * 0.1], [GUIDE_X - 0.6 * k, 8.4, k * 0.35], 0.04, 0.04), gm);
+    root.add(leg); leg.userData.ghost = true;
+  });
 })();
 
 g = def('guard', root, { n: 'Rear guard', g: 'body', shell: true, ex: [-3.6, -2.4, 0], pin: [-4.4, -0.3, 0.8],
@@ -823,6 +868,88 @@ ORDER.forEach(function (id) {
   INFO[id].facts = INFO[id].facts.concat([['Approx. size', d.join(' × ') + ' mm']]);
 });
 
+/* ---------------------------------------------------------- line on the reel */
+// PE braid in hi-vis yellow-green. Orange arrow tags ride along it and point the way the
+// line travels when you wind: in through the rod guide, over the line roller, onto the spool.
+var LINE = { m: 150, cap: 200, r0: 1.80, rFull: 2.20, phase: 0 };
+var lineGroup = new T.Group(); root.add(lineGroup);
+var lineMat = new T.MeshStandardMaterial({ color: 0xc8e62c, emissive: 0x4a5a00, roughness: 0.55 });
+var tagMat = new T.MeshStandardMaterial({ color: 0xff5a1f, emissive: 0x6a1800, roughness: 0.45 });
+var segGeo = new T.CylinderGeometry(1, 1, 1, 10, 1, true);
+var seg1 = new T.Mesh(segGeo, lineMat), seg2 = new T.Mesh(segGeo, lineMat);
+lineGroup.add(seg1); lineGroup.add(seg2);
+var TAGS = 7, tagGeo = new T.ConeGeometry(0.09, 0.28, 18), tags = [];
+for (i = 0; i < TAGS; i++) { var tg = new T.Mesh(tagGeo, tagMat); tg.castShadow = true; lineGroup.add(tg); tags.push(tg); }
+var pack = (function () {     // the line already wound on the spool
+  var c = document.createElement('canvas'); c.width = 64; c.height = 64;
+  var x = c.getContext('2d');
+  x.fillStyle = '#9fb51f'; x.fillRect(0, 0, 64, 64);
+  x.strokeStyle = '#dcf04a'; x.lineWidth = 5;
+  for (var k = -64; k < 128; k += 16) { x.beginPath(); x.moveTo(k, 0); x.lineTo(k + 64, 64); x.stroke(); }
+  x.strokeStyle = '#c3dc35'; x.lineWidth = 3;
+  for (k = -64; k < 128; k += 16) { x.beginPath(); x.moveTo(k + 64, 0); x.lineTo(k, 64); x.stroke(); }
+  var t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(36, 3); t.anisotropy = 4;
+  var pg = new T.CylinderGeometry(1, 1, 1.4, 128, 1, true); pg.rotateZ(-Math.PI / 2); pg.translate(4.56, 0, 0);   // open ends: only the outer wraps show
+  var m = new T.Mesh(pg, new T.MeshStandardMaterial({ map: t, roughness: 0.75, side: T.DoubleSide }));
+  m.receiveShadow = true; m.castShadow = true;
+  P.spool.g.add(m); return m;
+})();
+function packRadius() { return Math.sqrt(LINE.r0 * LINE.r0 + (LINE.m / LINE.cap) * (LINE.rFull * LINE.rFull - LINE.r0 * LINE.r0)); }
+var yAxis = new T.Vector3(0, 1, 0), va = new T.Vector3(), vb = new T.Vector3(), vd = new T.Vector3();
+function placeSeg(m, a, b, r) {
+  vd.subVectors(b, a); var len = vd.length() || 1e-4;
+  m.position.addVectors(a, b).multiplyScalar(0.5);
+  m.quaternion.setFromUnitVectors(yAxis, vd.multiplyScalar(1 / len));
+  m.scale.set(r, len, r);
+}
+var GUIDE = new T.Vector3(GUIDE_X, GUIDE_Y, 0), pRoll = new T.Vector3(), pTouch = new T.Vector3();
+
+/* --------------------------------------------------------------- cut-away */
+// A plane along the spool axis that removes the half of the outer shell facing the handle
+// side. Internal parts are never cut, so the gear train shows whole inside the cut shell.
+renderer.localClippingEnabled = true;
+var cutPlane = new T.Plane(new T.Vector3(0, 0, 1), 1e4), cutPlanes = [cutPlane];
+function cutZ() { return state.cut > 0.001 ? -6.5 * (1 - state.cut) : -1e4; }
+function clipped(id) { return !P[id] || !P[id].internal; }
+scene.traverse(function (o) {
+  if (!o.isMesh || !o.material) return;
+  if (o.userData.part && !clipped(o.userData.part)) return;
+  o.material.clippingPlanes = cutPlanes; o.material.clipShadows = true;
+});
+
+/* ------------------------------------------------------------- strip-down */
+// A typical servicing order for this kind of spinning reel, simplified.
+var STEPS = [
+  { t: 'Unscrew the drag knob', v: [2.2, 1.3], p: ['dragKnob', 'dragSeal'],
+    d: 'Turn the knob anticlockwise until it comes off the end of the main shaft. The seal under it comes away with it.' },
+  { t: 'Take out the drag washers', v: [2.2, 1.3], p: ['clip', 'wTop', 'felt1', 'wEar', 'felt2', 'wKey', 'felt3'],
+    d: 'Prise out the retainer clip, then lift the washers out in order: keyed, felt, eared, felt, keyed, felt. Lay them down in that order so they go back the same way.' },
+  { t: 'Lift off the spool', v: [2.3, 1.3], p: ['spool', 'spoolBearing', 'click', 'shims'],
+    d: 'The spool slides straight off the main shaft with its bearing and click wheel. Keep the shims behind it: they set how evenly the line stacks.' },
+  { t: 'Remove the bail', v: [2.5, 1.2], p: ['holderScrew', 'holder', 'wire', 'leverScrew', 'lever', 'collarA', 'collarB', 'roller', 'rollerBearing', 'spring'],
+    d: 'Undo the holder screw and the lever screw. The bail wire, lever and line roller come away as one unit, then the spring comes out of the rotor arm.' },
+  { t: 'Undo the rotor nut', v: [2.3, 1.35], p: ['nutLock', 'nut'],
+    d: 'Remove the small lock plate first, then unscrew the nut that clamps the rotor to the pinion gear.' },
+  { t: 'Slide off the rotor', v: [2.4, 1.35], p: ['rotor', 'friction'],
+    d: 'With the nut gone the rotor pulls straight forward off the pinion. The rubber friction ring comes off the front of the body.' },
+  { t: 'Remove the handle', v: [2.85, 1.4], p: ['collar', 'handle', 'knobCap', 'knobScrew', 'knobBearingB', 'knob', 'knobBearingA'],
+    d: 'Unscrew the handle from the drive gear. To service the knob, pop the cap, undo the screw and slide the knob off its two bearings.' },
+  { t: 'Take off the front plate', v: [2.4, 1.35], p: ['frontPlate', 'clutch', 'sleeve', 'bearingPF'],
+    d: 'Undo the three screws on the front of the body. The anti-reverse clutch, its sleeve and the front pinion bearing come out from the front.' },
+  { t: 'Open the gear box', v: [2.95, 1.3], p: ['guardScrews', 'guard', 'cap', 'plate', 'oring', 'bearingGA'],
+    d: 'Remove the rear guard and the cap on the far side, then unscrew the side plate. Check the O-ring seal before it goes back.' },
+  { t: 'Lift out the drive gear', v: [2.95, 1.25], p: ['gear', 'bearingGB'],
+    d: 'The drive gear lifts straight out of the open side. Its second bearing sits in the far wall of the body.' },
+  { t: 'Pull the shaft and pinion', v: [2.6, 1.25], p: ['slider', 'rod', 'oscGear', 'shaft', 'pinion', 'bearingPR'],
+    d: 'Undo the slider screw and draw the main shaft out of the front. Then the pinion and its rear bearing, and the oscillation gear lifts off its post. Only the body is left.' }
+];
+var STEP_OF = {}, STRIP_EX = { shaft: [9, 0, 0], bearingPR: [4.5, 0, 0], pinion: [6.5, 0, 0], gear: [0, 0, 3.2], slider: [-1.2, 0, -2.6], rod: [-1.4, 0, -3.2] };
+STEPS.forEach(function (st, k) { st.p.forEach(function (id) { STEP_OF[id] = k; }); });
+ORDER.forEach(function (id) {
+  var p = P[id]; p.st = 0; p.out = 0;
+  p.sx = STRIP_EX[id] ? new T.Vector3().fromArray(STRIP_EX[id]) : p.ex.clone().multiplyScalar(0.55);
+});
+
 /* ---------------------------------------------------------------- camera */
 var cur = { target: new T.Vector3(), r: 30, theta: 2.84, phi: 1.44 };
 var goal = { target: new T.Vector3(), r: 30, theta: 2.84, phi: 1.44 };
@@ -884,7 +1011,8 @@ function resize() {
     freeH = Math.max(160, bottom - top); view.offY = (h - (top + bottom)) / 2;
   }
   view.fx = freeW / h; view.fy = freeH / h;
-  scaleEl.style.bottom = (pr.height > h * 0.6 ? 18 : Math.round(ar.bottom - pr.top + 10)) + 'px';
+  var sb = pr.height > h * 0.6 ? 18 : Math.round(ar.bottom - pr.top + 10);
+  scaleEl.style.bottom = sb + 'px'; lineEl.style.bottom = (sb + 34) + 'px';
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.setViewOffset(w, h, view.offX, view.offY, w, h);
@@ -893,15 +1021,23 @@ function resize() {
 
 /* ------------------------------------------------------------ interaction */
 var raycaster = new T.Raycaster(), ndc = new T.Vector2();
-var state = { selected: null, hover: null, xray: false, spin: false, pins: true, explode: 0, angle: 0, speed: 0.5 };
+var state = { selected: null, hover: null, xray: false, spin: false, pins: true, explode: 0, angle: 0, speed: 0.5,
+              cut: 0, bail: 0, bailTarget: 0, strip: -1 };
+function isAssembled() { for (var k = 0; k < ORDER.length; k++) if (P[ORDER[k]].out > 0.01) return false; return true; }
 
-function visiblePick(m) { return !(state.xray && P[m.userData.part].shell); }
+function visibleHit(h) {
+  var p = P[h.object.userData.part];
+  if (!p.g.visible) return false;
+  if (state.xray && p.shell) return false;
+  if (!p.internal && h.point.z < cutZ()) return false;
+  return true;
+}
 function pickAt(clientX, clientY) {
   var r = canvas.getBoundingClientRect();
   ndc.set((clientX - r.left) / r.width * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
   raycaster.setFromCamera(ndc, camera);
   var hits = raycaster.intersectObjects(pickables, false);
-  for (var i = 0; i < hits.length; i++) if (visiblePick(hits[i].object)) return hits[i];
+  for (var i = 0; i < hits.length; i++) if (visibleHit(hits[i])) return hits[i];
   return null;
 }
 function paint() {
@@ -923,12 +1059,36 @@ function setSpin(on) { state.spin = on; document.getElementById('btn-spin').setA
 
 var detail = document.getElementById('detail'), list = document.getElementById('parts');
 function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function stripCard() {
+  var k = state.strip, n = STEPS.length, html;
+  if (k === 0) {
+    html = '<p class="kicker">Strip-down</p><h2>Take the reel apart</h2>' +
+      '<p class="lead">Step through a typical servicing order for this kind of spinning reel. Each step takes off the parts that would come off next.</p>' +
+      '<p>Back puts them on again. The order is simplified, not Daiwa’s service manual.</p>';
+  } else {
+    var st = STEPS[k - 1];
+    html = '<p class="kicker">Strip-down &middot; Step ' + k + ' of ' + n + '</p><h2>' + esc(st.t) + '</h2><p class="lead">' + esc(st.d) + '</p>' +
+      '<ul class="removed">' + st.p.map(function (id) { return '<li><button type="button" class="chip" data-id="' + id + '"><span class="n">' + (ORDER.indexOf(id) + 1) + '</span>' + esc(INFO[id].name) + '</button></li>'; }).join('') + '</ul>';
+  }
+  html += '<div class="stepnav">' +
+    '<button class="btn" type="button" data-step="-1"' + (k === 0 ? ' disabled' : '') + '>Back</button>' +
+    '<button class="btn" type="button" data-step="1"' + (k === n ? ' disabled' : '') + ' aria-pressed="true">' + (k === 0 ? 'Start' : 'Next') + '</button>' +
+    '<button class="btn" type="button" data-step="exit">' + (k === n ? 'Reassemble' : 'Exit') + '</button></div>';
+  if (state.selected) {
+    var d = INFO[state.selected];
+    html += '<p class="sel"><b>' + esc(d.name) + '.</b> ' + esc(d.text) + '</p>';
+  }
+  return html;
+}
 function renderDetail() {
   var id = state.selected;
-  if (!id) {
+  if (state.strip >= 0) {
+    detail.innerHTML = stripCard();
+  } else if (!id) {
     detail.innerHTML = '<p class="kicker">Explore</p><h2>Pick a part</h2>' +
       '<p class="lead">Click any part of the reel or choose one below and the camera flies in. Slide Explode to pull all ' + ORDER.length + ' parts apart like a parts diagram.</p>' +
-      '<p>Scroll or pinch to zoom toward the pointer. Drag to orbit. Right-drag or two-finger drag to pan. Drag the handle or its knob to wind the reel by hand.</p>';
+      '<p>Scroll or pinch to zoom toward the pointer. Drag to orbit. Right-drag or two-finger drag to pan. Drag the handle or its knob to wind the reel by hand.</p>' +
+      '<p>The orange arrows on the line point the way it travels as you wind, slowed down so you can follow them. Cut slices the reel open along the spool, and Strip down takes it apart step by step.</p>';
   } else {
     var d = INFO[id];
     detail.innerHTML = '<p class="kicker">No. ' + (ORDER.indexOf(id) + 1) + ' &middot; ' + esc(GROUPS[d.group].label) + '</p><h2>' + esc(d.name) + '</h2><p class="lead">' + esc(d.text) + '</p>' +
@@ -943,7 +1103,7 @@ function renderDetail() {
 function select(id) {
   state.selected = id;
   if (id) {
-    if (INFO[id].internal && !state.xray && state.explode < 0.35) setXray(true);
+    if (INFO[id].internal && !state.xray && P[id].out < 0.35 && state.cut < 0.6) setXray(true);
     if (INFO[id].group === 'rotor' || INFO[id].group === 'handle') setSpin(false);
     flyTo(id);
   }
@@ -966,10 +1126,17 @@ var pinsEl = document.getElementById('pins'), pinEls = {};
   list.innerHTML = html;
 })();
 list.addEventListener('click', function (e) { var b = e.target.closest('.part'); if (b) select(b.dataset.id); });
+detail.addEventListener('click', function (e) {
+  var c = e.target.closest('.chip'); if (c) { select(c.dataset.id); return; }
+  var b = e.target.closest('[data-step]'); if (!b) return;
+  var v = b.dataset.step;
+  if (v === 'exit') setStrip(-1); else setStrip(Math.max(0, Math.min(STEPS.length, state.strip + Number(v))));
+});
 pinsEl.addEventListener('click', function (e) { var b = e.target.closest('.pin'); if (b) select(b.dataset.id); });
 function syncPins() {
   ORDER.forEach(function (id) {
-    pinEls[id].hidden = !state.pins || (P[id].internal && !state.xray && state.explode < 0.35);
+    var p = P[id];
+    pinEls[id].hidden = !state.pins || !p.g.visible || (p.internal && !state.xray && p.out < 0.35 && state.cut < 0.6);
     pinEls[id].classList.toggle('is-selected', id === state.selected);
   });
 }
@@ -989,11 +1156,12 @@ function occlude(id) {
   var el = pinEls[id];
   if (el.hidden) return;
   P[id].anchor.getWorldPosition(v3);
+  if (!P[id].internal && v3.z < cutZ() + 0.05) { el.classList.add('is-occluded'); return; }
   var dist = v3.distanceTo(camera.position);
   occRay.set(camera.position, v3.sub(camera.position).normalize());
   var hits = occRay.intersectObjects(pickables, false), hidden = false;
   for (var i = 0; i < hits.length; i++) {
-    if (!visiblePick(hits[i].object)) continue;
+    if (!visibleHit(hits[i])) continue;
     hidden = hits[i].distance < dist - 0.12 && hits[i].object.userData.part !== id;
     break;
   }
@@ -1019,7 +1187,28 @@ function crankStart(e) {
 function crankMove(e) {
   var a = Math.atan2(e.clientY - crank.cy, e.clientX - crank.cx), d = a - crank.last;
   if (d > Math.PI) d -= Math.PI * 2; else if (d < -Math.PI) d += Math.PI * 2;
-  crank.last = a; state.angle += d * crank.sign; pose();
+  crank.last = a; d *= crank.sign;
+  if (d < 0) {          // the anti-reverse clutch stops the handle turning backwards
+    crank.back = (crank.back || 0) - d;
+    if (crank.back > 0.2) showTip('Anti-reverse: the handle only winds forward', e.clientX, e.clientY);
+    return;
+  }
+  crank.back = 0; advance(d);
+}
+function showTip(text, x, y) {
+  var r = app.getBoundingClientRect();
+  tip.textContent = text; tip.hidden = false;
+  tip.style.transform = 'translate(' + (x - r.left + 14) + 'px,' + (y - r.top + 16) + 'px)';
+}
+// Turning the handle: the rotor and spool move, line comes onto the spool, and an open bail snaps shut
+function advance(da) {
+  if (da <= 0) return;
+  state.angle += da;
+  if (state.bailTarget) setBail(false);
+  var before = LINE.m;
+  LINE.m = Math.min(LINE.cap, LINE.m + da / (Math.PI * 2) * 0.8);
+  LINE.phase += Math.min(0.3, (LINE.m - before) * 100 * 0.12 / 1.2);
+  pose();
 }
 function pan(dx, dy) {
   var k = 2 * cur.r * Math.tan(camera.fov * Math.PI / 360) / view.h;
@@ -1039,7 +1228,7 @@ canvas.addEventListener('pointerdown', function (e) {
   drag = { x0: e.clientX, y0: e.clientY, moved: 0, pan: e.button === 2 || e.button === 1 || e.shiftKey, t: performance.now(), multi: pointers.size > 1 };
   canvas.classList.add('is-dragging'); tip.hidden = true;
   crank = null;
-  if (pointers.size === 1 && !drag.pan && state.explode < 0.05) {
+  if (pointers.size === 1 && !drag.pan && isAssembled()) {
     var grabbed = pickAt(e.clientX, e.clientY);
     if (grabbed && CRANK_PARTS[grabbed.object.userData.part]) { crankStart(e); canvas.classList.add('is-cranking'); }
   }
@@ -1091,7 +1280,7 @@ function hover(e) {
   if (e.pointerType !== 'mouse') return;
   var now = performance.now(); if (now - hoverAt < 40) return; hoverAt = now;
   var hit = pickAt(e.clientX, e.clientY), id = hit ? hit.object.userData.part : null;
-  var windable = !!(id && CRANK_PARTS[id] && state.explode < 0.05);
+  var windable = !!(id && CRANK_PARTS[id] && isAssembled());
   if (id !== state.hover) { state.hover = id; paint(); canvas.classList.toggle('is-over', !!id && !windable); canvas.classList.toggle('is-crank', windable); }
   if (id) {
     var r = app.getBoundingClientRect();
@@ -1101,7 +1290,56 @@ function hover(e) {
 }
 
 // Controls
-document.getElementById('btn-home').addEventListener('click', function () { select(null); goHome(); });
+document.getElementById('btn-home').addEventListener('click', function () { if (state.strip >= 0) setStrip(-1); select(null); goHome(); });
+function setBail(open) {
+  state.bailTarget = open ? 1 : 0;
+  var b = document.getElementById('btn-bail');
+  b.setAttribute('aria-pressed', String(open)); b.textContent = open ? 'Close bail' : 'Open bail';
+}
+document.getElementById('btn-bail').addEventListener('click', function () {
+  if (!isAssembled()) return;
+  setBail(!state.bailTarget); if (state.bailTarget) setSpin(false);
+});
+document.getElementById('cut').addEventListener('input', function (e) {
+  state.cut = e.target.value / 100; cutPlane.constant = -cutZ(); syncPins();
+});
+document.getElementById('line-reset').addEventListener('click', function () { LINE.m = 150; });
+var explodeInput = document.getElementById('explode');
+function setStrip(k) {
+  var was = state.strip;
+  state.strip = k;
+  document.getElementById('btn-strip').setAttribute('aria-pressed', String(k >= 0));
+  if (k >= 0) {
+    if (was < 0) { setSpin(false); setBail(false); explodeInput.value = 0; state.explode = 0; explodeInput.disabled = true; select(null); }
+  } else {
+    explodeInput.disabled = false;
+  }
+  ORDER.forEach(function (id) {
+    var p = P[id], si = STEP_OF[id] === undefined ? 1e9 : STEP_OF[id];
+    p.stTarget = k >= 0 && si < k ? 1 : 0;
+    // parts from earlier steps are set aside out of view; the latest step stays in sight
+    p.g.visible = !(k >= 0 && si < k - 1);
+  });
+  frameStrip(); renderDetail(); syncPins();
+}
+// Frame the parts still on the reel together with the ones this step takes off, at their end positions
+function frameStrip() {
+  if (state.strip < 0) { goHome(); return; }
+  var all = new T.Box3(), b = new T.Box3(), off = new T.Vector3();
+  ORDER.forEach(function (id) {
+    var p = P[id]; if (!p.g.visible) return;
+    b.makeEmpty(); p.meshes.forEach(function (m) { b.expandByObject(m); });
+    var e = function (t) { return t * t * (3 - 2 * t); };
+    off.copy(p.sx).multiplyScalar(e(p.stTarget) - e(p.st)); off.z = -off.z;   // the model is mirrored in z
+    b.translate(off); all.union(b);
+  });
+  all.getBoundingSphere(sph);
+  goal.target.copy(sph.center);
+  goal.r = Math.max(6, Math.min(R_MAX, fitRadius(sph.radius * 0.95)));
+  var v = state.strip > 0 ? STEPS[state.strip - 1].v : [home.theta, home.phi];
+  goal.theta = nearestAngle(v[0], cur.theta); goal.phi = v[1];
+}
+document.getElementById('btn-strip').addEventListener('click', function () { setStrip(state.strip >= 0 ? -1 : 0); });
 document.getElementById('btn-spin').addEventListener('click', function () { setSpin(!state.spin); });
 document.getElementById('btn-xray').addEventListener('click', function () { setXray(!state.xray); });
 (function () {
@@ -1116,6 +1354,8 @@ document.getElementById('btn-pins').addEventListener('click', function (e) {
   state.pins = !state.pins; e.currentTarget.setAttribute('aria-pressed', String(state.pins)); syncPins();
 });
 document.getElementById('explode').addEventListener('input', function (e) {
+  if (state.strip >= 0) return;
+  if (state.bailTarget) setBail(false);
   state.explode = e.target.value / 100; applyExplode(); syncPins();
   if (!state.selected) {      // swing round to a three-quarter view as the parts spread out
     computeHome(); goal.target.copy(home.target); goal.r = home.r;
@@ -1124,10 +1364,44 @@ document.getElementById('explode').addEventListener('input', function (e) {
 });
 function applyExplode() {
   var t = state.explode; t = t * t * (3 - 2 * t);
-  ORDER.forEach(function (id) { var p = P[id]; p.g.position.copy(p.base).addScaledVector(p.ex, t); });
+  ORDER.forEach(function (id) {
+    var p = P[id], s = p.st * p.st * (3 - 2 * p.st);
+    p.g.position.copy(p.base).addScaledVector(p.ex, t).addScaledVector(p.sx, s);
+    p.out = Math.max(t, s);
+  });
   axes.children.forEach(function (l) { l.material.opacity = t * 0.55; });
   root.updateMatrixWorld(true);
 }
+function updateLine() {
+  var rp = packRadius();
+  pack.scale.set(1, rp, rp); pack.visible = !state.xray;
+  lineGroup.visible = !state.xray && isAssembled();
+  lineEl.hidden = !lineGroup.visible;
+  if (!lineGroup.visible) return;
+  var r = rotorSpin.rotation.x, ox = osc.position.x, open = state.bail > 0.5;
+  if (!open) {
+    pRoll.set(RX, RY * Math.cos(r), RY * Math.sin(r));
+    var a = r - Math.acos(Math.min(1, rp / RY));          // the line meets the spool where it is tangent
+    pTouch.set(RX, rp * Math.cos(a), rp * Math.sin(a));
+    placeSeg(seg1, GUIDE, pRoll, 0.035); placeSeg(seg2, pRoll, pTouch, 0.035);
+  } else {                                                 // bail open: line peels over the front lip
+    pRoll.set(5.6 + ox, 2.28, 0); pTouch.set(5.2 + ox, rp, 0);
+    placeSeg(seg1, GUIDE, pRoll, 0.035); placeSeg(seg2, pRoll, pTouch, 0.035);
+  }
+  vd.subVectors(pRoll, GUIDE); var len = vd.length(); vd.normalize();
+  for (var k = 0; k < TAGS; k++) {
+    var tg = tags[k], f = ((k + LINE.phase) % TAGS + TAGS) % TAGS / TAGS;
+    tg.visible = !open;
+    tg.position.copy(GUIDE).addScaledVector(vd, f * len);
+    tg.quaternion.setFromUnitVectors(yAxis, vd);
+    var sc = Math.max(0.001, Math.min(1, f * TAGS * 0.8, (1 - f) * TAGS * 0.8));
+    tg.scale.setScalar(sc);
+  }
+  var txt = LINE.m >= LINE.cap ? 'Spool full · 200 m' : 'Line on spool ' + LINE.m.toFixed(1) + ' m';
+  if (lineText.textContent !== txt) lineText.textContent = txt;
+  lineReset.hidden = LINE.m < LINE.cap;
+}
+var lineEl = document.getElementById('linechip'), lineText = document.getElementById('line-m'), lineReset = document.getElementById('line-reset');
 function pose() {
   var a = state.angle;
   var b = a * 0.55;
@@ -1155,7 +1429,19 @@ window.addEventListener('resize', function () { resize(); if (!state.selected) {
 var last = performance.now();
 function frame(now) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
-  if (state.spin && !crank) { state.angle += dt * Math.PI * 2 * state.speed; pose(); }
+  if (state.spin && !crank && isAssembled()) advance(dt * Math.PI * 2 * state.speed);
+  if (state.bail !== state.bailTarget) {
+    state.bail = reduceMotion ? state.bailTarget : Math.max(0, Math.min(1, state.bail + Math.sign(state.bailTarget - state.bail) * dt / 0.35));
+    var eb = state.bail * state.bail * (3 - 2 * state.bail);
+    bailPivot.rotation.y = eb * BAIL_OPEN; root.updateMatrixWorld(true);
+  }
+  var moving = false;
+  ORDER.forEach(function (id) {
+    var p = P[id], tg = p.stTarget || 0;
+    if (p.st !== tg) { p.st = reduceMotion ? tg : Math.max(0, Math.min(1, p.st + Math.sign(tg - p.st) * dt / 0.8)); moving = true; }
+  });
+  if (moving) { applyExplode(); syncPins(); }
+  updateLine();
   var k = reduceMotion ? 1 : 1 - Math.exp(-dt * 7);
   cur.target.lerp(goal.target, k);
   cur.r += (goal.r - cur.r) * k; cur.theta += (goal.theta - cur.theta) * k; cur.phi += (goal.phi - cur.phi) * k;
@@ -1168,7 +1454,7 @@ function frame(now) {
 pose(); applyExplode(); renderDetail(); syncPins(); paint();
 resize(); goHome(true); applyCamera();
 requestAnimationFrame(frame);
-window.__reel = { select: select, state: state, setXray: setXray, snap: snap, pose: pose, parts: P, three: T };
+window.__reel = { select: select, state: state, setXray: setXray, snap: snap, pose: pose, parts: P, three: T, setStrip: setStrip, setBail: setBail, advance: advance, LINE: LINE, bailPivot: bailPivot, root: root };
 })();
 </script>
 <!--page:body-end-->
