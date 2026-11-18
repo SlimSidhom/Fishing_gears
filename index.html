@@ -926,6 +926,7 @@ function placeSeg(m, a, b, r) {
   m.scale.set(r, len, r);
 }
 var LP = []; for (i = 0; i < 48; i++) LP.push(new T.Vector3());
+var vW = new T.Vector3();
 var GUIDE = new T.Vector3(GUIDE_X, GUIDE_Y, 0), pRoll = new T.Vector3(), pTouch = new T.Vector3(), pMid = new T.Vector3();
 // Draw the visible line as straight pieces, splitting a piece where the next 5 m colour starts.
 // Distance along the line is counted from the spool, where the line on the reel ends at LINE.m.
@@ -1446,13 +1447,27 @@ function updateLine() {
     pRoll.copy(LP[n - 1]);
     pt(GUIDE.x, GUIDE.y, GUIDE.z);
   } else {
-    // bail open: nothing holds the line, so it peels over the front lip and hangs slack to the guide
+    // bail open: the open bail wire has dragged the line down, so it comes off the front lip on the
+    // wire's side, runs under the middle of the wire and then hangs slack to the guide
     var sag = 7 * state.slack * state.slack * (3 - 2 * state.slack), sway = Math.sin(performance.now() / 900) * 0.25 * state.slack;
-    pt(5.2 + ox, rp, 0); pt(5.6 + ox, 2.28, 0);
-    pRoll.copy(LP[1]);
+    P.wire.anchor.getWorldPosition(vW); root.worldToLocal(vW);
+    // work in the half-plane through the spool axis and the middle of the wire: x along the axis, u outward
+    var phi = Math.atan2(vW.z, vW.y), cp = Math.cos(phi), sp = Math.sin(phi);
+    var wx = vW.x, wu = Math.hypot(vW.y, vW.z), rho = 0.15, lx = 5.46 + ox, lu = 2.37;
+    var gxx = GUIDE.x - wx, guu = (GUIDE.y * cp + GUIDE.z * sp) - wu, lxx = lx - wx, luu = lu - wu;
+    // the line pulls toward the lip and toward the guide, so it wraps round the far side of the wire
+    var aIn2 = Math.atan2(guu, gxx) + Math.acos(Math.min(1, rho / Math.hypot(gxx, guu)));
+    var aOut2 = Math.atan2(luu, lxx) - Math.acos(Math.min(1, rho / Math.hypot(lxx, luu)));
+    while (aOut2 < aIn2) aOut2 += Math.PI * 2;
+    pt(5.12 + ox, rp * cp, rp * sp); pt(lx, lu * cp, lu * sp);
+    for (k = 0; k <= 6; k++) {
+      var th2 = aOut2 + (aIn2 - aOut2) * k / 6, uu = wu + rho * Math.sin(th2);
+      pt(wx + rho * Math.cos(th2), uu * cp, uu * sp);
+    }
+    pRoll.copy(LP[n - 1]);
     for (k = 1; k <= 30; k++) {
       var f = k / 30, d = 4 * f * (1 - f);
-      pt(pRoll.x + (GUIDE.x - pRoll.x) * f, pRoll.y + (GUIDE.y - pRoll.y) * f - sag * d, sway * d);
+      pt(pRoll.x + (GUIDE.x - pRoll.x) * f, pRoll.y + (GUIDE.y - pRoll.y) * f - sag * d, pRoll.z + (GUIDE.z - pRoll.z) * f + sway * d);
     }
   }
   drawLine(LP.slice(0, n));
