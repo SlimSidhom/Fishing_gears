@@ -123,7 +123,7 @@ h1 small { display: block; font-size: .55em; font-weight: 500; letter-spacing: .
   font: 600 12px/1 var(--font-display); letter-spacing: .06em; text-transform: uppercase; font-variant-numeric: tabular-nums;
   text-shadow: 0 0 6px var(--halo), 0 0 12px var(--halo);
 }
-.linechip::before { content: ""; width: 22px; height: 3px; border-radius: 2px; background: #c8e62c; box-shadow: 9px 0 0 -0.5px #ff5a1f; }
+.linechip i { display: block; width: 22px; height: 4px; border-radius: 2px; box-shadow: 0 0 0 1px var(--line); }
 .linechip button {
   border: 1px solid var(--line); background: var(--surface); border-radius: 4px; padding: 4px 7px; cursor: pointer;
   font: inherit; letter-spacing: .06em; text-shadow: none;
@@ -233,7 +233,7 @@ h1 small { display: block; font-size: .55em; font-weight: 500; letter-spacing: .
   <div class="pins" id="pins"></div>
   <div class="tip" id="tip" hidden></div>
   <div class="scale" id="scale" aria-hidden="true"><i></i><b>10 mm</b></div>
-  <div class="linechip" id="linechip"><span id="line-m"></span><button type="button" id="line-reset" hidden>Reset line</button></div>
+  <div class="linechip" id="linechip"><i id="line-sw" aria-hidden="true"></i><span id="line-m"></span><button type="button" id="line-reset" hidden>Reset line</button></div>
 
   <header class="title">
     <p class="eyebrow">Daiwa &middot; eging spinning reel</p>
@@ -597,11 +597,11 @@ mesh(g, torusX(1.35, 0.06, 0.1), MAT.rubber());
 
 var RX = 3.85, RY = 2.85, WIRE_R = 4.5;   // line roller position on the bail arm, bail wire reach
 // The bail swings open about the line through its two hinge points (roller end and holder end)
-var BAIL_OPEN = 2.97;      // about 170°: the bail flips over to the far side of the spool
+var BAIL_OPEN = -2.97;     // about 170°: the wire swings forward round the front of the spool to the far side
 var bailPivot = new T.Group(); bailPivot.position.set(RX, 0, 0); rotorSpin.add(bailPivot);
 var bailArm = new T.Group(); bailArm.position.set(-RX, 0, 0); bailPivot.add(bailArm);
-g = def('lever', bailArm, { n: 'Bail arm lever', g: 'rotor', ex: [9.3, 2.0, 0], pin: [3.5, 3.3, 0.5],
-  t: 'Pivots on the rotor arm and carries the line roller. Flipping it open releases the line for a cast.' });
+g = def('lever', rotorSpin, { n: 'Bail arm lever', g: 'rotor', ex: [9.3, 2.0, 0], pin: [3.5, 3.3, 0.5],
+  t: 'The hinge bracket on the rotor arm that the bail and line roller swing on. Flipping the bail open releases the line for a cast.' });
 mesh(g, extrude(splineShape([[2.95, 2.95], [3.3, 3.3], [3.9, 3.34], [4.28, 3.05], [4.25, 2.62], [3.85, 2.5], [3.3, 2.62]]), 0.26, 0.09, 60), MAT.silver(), [0, 0, 0.56]);
 
 g = def('leverScrew', rotorSpin, { n: 'Lever screw', g: 'rotor', ex: [9.3, 2.0, 1.0], pin: [3.3, 3.0, 0.86],
@@ -869,24 +869,31 @@ ORDER.forEach(function (id) {
 });
 
 /* ---------------------------------------------------------- line on the reel */
-// PE braid in hi-vis yellow-green. Orange arrow tags ride along it and point the way the
-// line travels when you wind: in through the rod guide, over the line roller, onto the spool.
+// Multicolour PE braid: the colour changes every 5 m, so you can read how much line is out.
+// White arrow tags ride along it and point the way the line travels when you wind: in
+// through the rod guide, over the line roller, onto the spool.
 var LINE = { m: 150, cap: 200, r0: 1.80, rFull: 2.20, phase: 0 };
+var SECTION = 5, BRAID = [0xf1d72a, 0x2b78f0, 0x2fbf5a, 0x8a52d8, 0xe23b3b];   // yellow, blue, green, purple, red
+var BRAID_NAMES = ['yellow', 'blue', 'green', 'purple', 'red'];
+function sectionOf(m) { return ((Math.floor(m / SECTION) % BRAID.length) + BRAID.length) % BRAID.length; }
 var lineGroup = new T.Group(); root.add(lineGroup);
-var lineMat = new T.MeshStandardMaterial({ color: 0xc8e62c, emissive: 0x4a5a00, roughness: 0.55 });
-var tagMat = new T.MeshStandardMaterial({ color: 0xff5a1f, emissive: 0x6a1800, roughness: 0.45 });
-var segGeo = new T.CylinderGeometry(1, 1, 1, 10, 1, true);
-var seg1 = new T.Mesh(segGeo, lineMat), seg2 = new T.Mesh(segGeo, lineMat);
-lineGroup.add(seg1); lineGroup.add(seg2);
+var segGeo = new T.CylinderGeometry(1, 1, 1, 10, 1, true), pieces = [];
+for (i = 0; i < 4; i++) { var pc = new T.Mesh(segGeo, new T.MeshStandardMaterial({ roughness: 0.55 })); lineGroup.add(pc); pieces.push(pc); }
+var tagMat = new T.MeshStandardMaterial({ color: 0xffffff, emissive: 0x555555, roughness: 0.4 });
+var tagEdge = new T.MeshBasicMaterial({ color: 0x14171b, side: T.BackSide });
 var TAGS = 7, tagGeo = new T.ConeGeometry(0.09, 0.28, 18), tags = [];
-for (i = 0; i < TAGS; i++) { var tg = new T.Mesh(tagGeo, tagMat); tg.castShadow = true; lineGroup.add(tg); tags.push(tg); }
+for (i = 0; i < TAGS; i++) {
+  var tg = new T.Mesh(tagGeo, tagMat); tg.castShadow = true;
+  var edge = new T.Mesh(tagGeo, tagEdge); edge.scale.set(1.35, 1.2, 1.35); tg.add(edge);   // dark outline so the tag reads on any colour
+  lineGroup.add(tg); tags.push(tg);
+}
 var pack = (function () {     // the line already wound on the spool
   var c = document.createElement('canvas'); c.width = 64; c.height = 64;
   var x = c.getContext('2d');
-  x.fillStyle = '#9fb51f'; x.fillRect(0, 0, 64, 64);
-  x.strokeStyle = '#dcf04a'; x.lineWidth = 5;
+  x.fillStyle = '#a8a8a8'; x.fillRect(0, 0, 64, 64);
+  x.strokeStyle = '#ffffff'; x.lineWidth = 5;
   for (var k = -64; k < 128; k += 16) { x.beginPath(); x.moveTo(k, 0); x.lineTo(k + 64, 64); x.stroke(); }
-  x.strokeStyle = '#c3dc35'; x.lineWidth = 3;
+  x.strokeStyle = '#dedede'; x.lineWidth = 3;
   for (k = -64; k < 128; k += 16) { x.beginPath(); x.moveTo(k + 64, 0); x.lineTo(k, 64); x.stroke(); }
   var t = new T.CanvasTexture(c); t.colorSpace = T.SRGBColorSpace; t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(36, 3); t.anisotropy = 4;
   var pg = new T.CylinderGeometry(1, 1, 1.4, 128, 1, true); pg.rotateZ(-Math.PI / 2); pg.translate(4.56, 0, 0);   // open ends: only the outer wraps show
@@ -902,7 +909,26 @@ function placeSeg(m, a, b, r) {
   m.quaternion.setFromUnitVectors(yAxis, vd.multiplyScalar(1 / len));
   m.scale.set(r, len, r);
 }
-var GUIDE = new T.Vector3(GUIDE_X, GUIDE_Y, 0), pRoll = new T.Vector3(), pTouch = new T.Vector3();
+var GUIDE = new T.Vector3(GUIDE_X, GUIDE_Y, 0), pRoll = new T.Vector3(), pTouch = new T.Vector3(), pMid = new T.Vector3();
+// Draw the visible line as straight pieces, splitting a piece where the next 5 m colour starts.
+// Distance along the line is counted from the spool, where the line on the reel ends at LINE.m.
+function drawLine(pts) {
+  var used = 0, next = (Math.floor(LINE.m / SECTION) + 1) * SECTION, edgeCm = (next - LINE.m) * 100, acc = 0;
+  for (var k = 0; k < pts.length - 1; k++) {
+    var a = pts[k], b = pts[k + 1], l = a.distanceTo(b);
+    if (edgeCm > acc && edgeCm < acc + l) {
+      pMid.copy(a).lerp(b, (edgeCm - acc) / l);
+      piece(used++, a, pMid, LINE.m); piece(used++, pMid, b, next + 0.001);
+    } else piece(used++, a, b, acc >= edgeCm ? next + 0.001 : LINE.m);
+    acc += l;
+  }
+  for (; used < pieces.length; used++) pieces[used].visible = false;
+}
+function piece(k, a, b, m) {
+  var p = pieces[k], c = BRAID[sectionOf(m)];
+  p.visible = true; placeSeg(p, a, b, 0.035);
+  p.material.color.setHex(c); p.material.emissive.setHex(c).multiplyScalar(0.18);
+}
 
 /* --------------------------------------------------------------- cut-away */
 // A plane along the spool axis that removes the half of the outer shell facing the handle
@@ -1088,7 +1114,7 @@ function renderDetail() {
     detail.innerHTML = '<p class="kicker">Explore</p><h2>Pick a part</h2>' +
       '<p class="lead">Click any part of the reel or choose one below and the camera flies in. Slide Explode to pull all ' + ORDER.length + ' parts apart like a parts diagram.</p>' +
       '<p>Scroll or pinch to zoom toward the pointer. Drag to orbit. Right-drag or two-finger drag to pan. Drag the handle or its knob to wind the reel by hand.</p>' +
-      '<p>The orange arrows on the line point the way it travels as you wind, slowed down so you can follow them. Cut slices the reel open along the spool, and Strip down takes it apart step by step.</p>';
+      '<p>The line is multicolour braid that changes colour every 5 m. The white arrows on it point the way it travels as you wind, slowed down so you can follow them. Cut slices the reel open along the spool, and Strip down takes it apart step by step.</p>';
   } else {
     var d = INFO[id];
     detail.innerHTML = '<p class="kicker">No. ' + (ORDER.indexOf(id) + 1) + ' &middot; ' + esc(GROUPS[d.group].label) + '</p><h2>' + esc(d.name) + '</h2><p class="lead">' + esc(d.text) + '</p>' +
@@ -1373,8 +1399,12 @@ function applyExplode() {
   root.updateMatrixWorld(true);
 }
 function updateLine() {
-  var rp = packRadius();
+  var rp = packRadius(), sec = sectionOf(LINE.m);
   pack.scale.set(1, rp, rp); pack.visible = !state.xray;
+  if (pack.userData.sec !== sec) {      // the top layer on the spool shows the colour now going on
+    pack.userData.sec = sec; pack.material.color.setHex(BRAID[sec]);
+    lineSw.style.background = '#' + BRAID[sec].toString(16).padStart(6, '0'); lineSw.title = BRAID_NAMES[sec];
+  }
   lineGroup.visible = !state.xray && isAssembled();
   lineEl.hidden = !lineGroup.visible;
   if (!lineGroup.visible) return;
@@ -1383,11 +1413,10 @@ function updateLine() {
     pRoll.set(RX, RY * Math.cos(r), RY * Math.sin(r));
     var a = r - Math.acos(Math.min(1, rp / RY));          // the line meets the spool where it is tangent
     pTouch.set(RX, rp * Math.cos(a), rp * Math.sin(a));
-    placeSeg(seg1, GUIDE, pRoll, 0.035); placeSeg(seg2, pRoll, pTouch, 0.035);
   } else {                                                 // bail open: line peels over the front lip
     pRoll.set(5.6 + ox, 2.28, 0); pTouch.set(5.2 + ox, rp, 0);
-    placeSeg(seg1, GUIDE, pRoll, 0.035); placeSeg(seg2, pRoll, pTouch, 0.035);
   }
+  drawLine([pTouch, pRoll, GUIDE]);
   vd.subVectors(pRoll, GUIDE); var len = vd.length(); vd.normalize();
   for (var k = 0; k < TAGS; k++) {
     var tg = tags[k], f = ((k + LINE.phase) % TAGS + TAGS) % TAGS / TAGS;
@@ -1397,11 +1426,11 @@ function updateLine() {
     var sc = Math.max(0.001, Math.min(1, f * TAGS * 0.8, (1 - f) * TAGS * 0.8));
     tg.scale.setScalar(sc);
   }
-  var txt = LINE.m >= LINE.cap ? 'Spool full · 200 m' : 'Line on spool ' + LINE.m.toFixed(1) + ' m';
+  var txt = LINE.m >= LINE.cap ? 'Spool full · 200 m' : 'Line on spool ' + LINE.m.toFixed(1) + ' m · next colour in ' + (Math.floor(LINE.m / SECTION + 1) * SECTION - LINE.m).toFixed(1) + ' m';
   if (lineText.textContent !== txt) lineText.textContent = txt;
   lineReset.hidden = LINE.m < LINE.cap;
 }
-var lineEl = document.getElementById('linechip'), lineText = document.getElementById('line-m'), lineReset = document.getElementById('line-reset');
+var lineEl = document.getElementById('linechip'), lineText = document.getElementById('line-m'), lineReset = document.getElementById('line-reset'), lineSw = document.getElementById('line-sw');
 function pose() {
   var a = state.angle;
   var b = a * 0.55;
