@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--page:start-->
+<title>Emeraldas Air Reel Viewer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+/* Layout: the reel owns the whole screen; a title block floats top-left and one
+   panel (right column on desktop, bottom sheet on phones) holds detail, parts, view controls. */
+:root {
+  --stage-a: #fafbfc;
+  --stage-b: #c3c8cf;
+  --surface: rgba(251, 252, 253, .9);
+  --surface-solid: #fbfcfd;
+  --ink: #14181d;
+  --muted: #535b66;
+  --line: rgba(20, 24, 29, .15);
+  --accent: #087f78;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(8, 127, 120, .12);
+  --pin-bg: #14181d;
+  --halo: #f4f5f7;
+  --pin-ink: #fafbfc;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Barlow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --stage-a: #4a5059; --stage-b: #0c0e11;
+    --surface: rgba(18, 21, 26, .86); --surface-solid: #12151a;
+    --ink: #eceff2; --muted: #a3acb7; --line: rgba(236, 239, 242, .16);
+    --accent: #2ccfc2; --accent-ink: #04211f; --accent-soft: rgba(44, 207, 194, .14);
+    --pin-bg: #eceff2; --pin-ink: #12151a; --halo: #0c0e11;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --stage-a: #4a5059; --stage-b: #0c0e11;
+  --surface: rgba(18, 21, 26, .86); --surface-solid: #12151a;
+  --ink: #eceff2; --muted: #a3acb7; --line: rgba(236, 239, 242, .16);
+  --accent: #2ccfc2; --accent-ink: #04211f; --accent-soft: rgba(44, 207, 194, .14);
+  --pin-bg: #eceff2; --pin-ink: #12151a; --halo: #0c0e11;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--stage-b);
+  color: var(--ink);
+  font: 400 15px/1.45 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+[hidden] { display: none !important; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app {
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse 80% 75% at 40% 42%, var(--stage-a), var(--stage-b));
+  overflow: hidden;
+}
+#stage { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#stage.is-dragging { cursor: grabbing; }
+#stage.is-over { cursor: pointer; }
+
+/* Title block */
+.title {
+  position: absolute; top: calc(18px + env(safe-area-inset-top, 0px)); left: var(--gutter-l);
+  max-width: min(520px, calc(100% - 380px));
+  pointer-events: none;
+  text-shadow: 0 0 6px var(--halo), 0 0 14px var(--halo), 0 0 22px var(--halo);
+}
+.eyebrow {
+  margin: 0; font: 600 13px/1 var(--font-display);
+  letter-spacing: .16em; text-transform: uppercase; color: var(--accent);
+}
+h1 {
+  margin: 6px 0 0; font: 700 clamp(26px, 3.4vw, 44px)/.98 var(--font-display);
+  letter-spacing: .005em; text-transform: uppercase; text-wrap: balance;
+}
+h1 small { display: block; font-size: .55em; font-weight: 500; letter-spacing: .08em; color: var(--muted); margin-top: 4px; }
+.specs {
+  display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 14px 0 0; padding: 0; list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+.specs li { display: flex; flex-direction: column; }
+.specs b { font: 600 20px/1.05 var(--font-display); }
+.specs span { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+/* Pins */
+.pins { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.pin {
+  position: absolute; left: 0; top: 0; width: 19px; height: 19px; margin: -9.5px 0 0 -9.5px;
+  border-radius: 50%; border: 1.5px solid var(--pin-ink); padding: 0;
+  background: var(--pin-bg); color: var(--pin-ink);
+  font: 600 11px/1 var(--font-display); font-variant-numeric: tabular-nums;
+  pointer-events: auto; cursor: pointer;
+  transition: opacity .2s, background-color .15s, scale .15s;
+  will-change: transform;
+}
+.pin:hover { scale: 1.2; }
+.pin.is-occluded { opacity: 0; pointer-events: none; }
+.pin.is-selected { background: var(--accent); color: var(--accent-ink); border-color: var(--accent-ink); scale: 1.25; opacity: 1; pointer-events: auto; }
+.scale {
+  position: absolute; left: var(--gutter-l); bottom: 18px; pointer-events: none;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+  text-shadow: 0 0 6px var(--halo), 0 0 12px var(--halo);
+}
+.scale i { display: block; height: 7px; border: 1.5px solid var(--ink); border-top: 0; }
+.scale b { font: 600 12px/1 var(--font-display); letter-spacing: .08em; font-variant-numeric: tabular-nums; }
+.tip {
+  position: absolute; left: 0; top: 0; pointer-events: none;
+  background: var(--pin-bg); color: var(--pin-ink);
+  font: 600 13px/1 var(--font-display); letter-spacing: .06em; text-transform: uppercase;
+  padding: 6px 9px; border-radius: 4px; white-space: nowrap;
+}
+
+/* Panel */
+.panel {
+  position: absolute; top: calc(16px + env(safe-area-inset-top, 0px)); right: var(--gutter-r);
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  width: 330px; display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  overflow: hidden;
+}
+.detail { padding: 18px 18px 16px; border-bottom: 1px solid var(--line); min-width: 0; }
+.detail .kicker { margin: 0; font: 600 12px/1 var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+.detail h2 { margin: 6px 0 0; font: 600 26px/1.05 var(--font-display); text-transform: uppercase; text-wrap: balance; }
+.detail p { margin: 10px 0 0; color: var(--muted); }
+.detail p.lead { color: var(--ink); }
+.facts { margin: 12px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-variant-numeric: tabular-nums; }
+.facts dt { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
+.facts dd { margin: 0; font-weight: 500; }
+
+.parts { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0; padding: 8px; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.parts .group { padding: 10px 10px 4px; font: 600 11px/1 var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.part {
+  width: 100%; display: flex; align-items: center; gap: 10px; text-align: left;
+  padding: 7px 10px; border: 0; border-radius: 6px; background: transparent; cursor: pointer;
+}
+.part:hover { background: var(--accent-soft); }
+.part .n {
+  flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  border: 1px solid var(--line); font: 600 12px/1 var(--font-display); font-variant-numeric: tabular-nums; color: var(--muted);
+}
+.part .name { min-width: 0; font-weight: 500; }
+.part[aria-current="true"] { background: var(--accent-soft); }
+.part[aria-current="true"] .n { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+.controls { border-top: 1px solid var(--line); padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.btn {
+  flex: 1 1 auto; padding: 8px 10px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--line); background: transparent;
+  font: 600 13px/1 var(--font-display); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); }
+.btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.slider { display: flex; align-items: center; gap: 12px; }
+.slider label { font: 600 13px/1 var(--font-display); letter-spacing: .08em; text-transform: uppercase; }
+.slider label { flex: none; width: 62px; }
+.slider input { flex: 1; min-width: 0; accent-color: var(--accent); }
+.slider output { flex: none; width: 124px; text-align: right; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#stage.is-crank { cursor: grab; }
+#stage.is-cranking { cursor: grabbing; }
+.note { margin: 0; font-size: 11.5px; line-height: 1.35; color: var(--muted); }
+.fail { position: absolute; inset: 40% var(--gutter-r) auto var(--gutter-l); text-align: center; color: var(--muted); }
+
+@media (max-width: 760px) {
+  .title { max-width: none; right: var(--gutter-r); top: calc(12px + env(safe-area-inset-top, 0px)); }
+  h1 { font-size: 26px; }
+  .specs { margin-top: 8px; gap: 4px 14px; }
+  .specs b { font-size: 16px; }
+  .specs span { font-size: 10px; }
+  .panel {
+    top: auto; left: var(--gutter-l); width: auto; max-height: 47%;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+  .detail { padding: 12px 14px; overflow-y: auto; flex: 0 1 auto; min-height: 64px; }
+  .detail h2 { font-size: 21px; }
+  .detail p { margin-top: 6px; font-size: 14px; }
+  .facts { margin-top: 8px; }
+  .parts { flex: none; flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 8px; gap: 4px; }
+  .parts .group { display: none; }
+  .part { width: auto; flex: none; padding: 6px 10px 6px 6px; border: 1px solid var(--line); white-space: nowrap; }
+  .controls { padding: 8px 10px 10px; gap: 8px; }
+  .row { grid-template-columns: repeat(4, auto); }
+  .btn { padding: 8px 6px; letter-spacing: .04em; }
+  .note { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .pin { transition: none; } }
+</style>
+<!--page:head-end-->
+</head>
+<body>
+<!--page:body-start-->
+<div class="app" id="app">
+  <canvas id="stage" aria-label="Interactive 3D model of the reel. Use the parts list to move the camera to a component."></canvas>
+  <div class="pins" id="pins"></div>
+  <div class="tip" id="tip" hidden></div>
+  <div class="scale" id="scale" aria-hidden="true"><i></i><b>10 mm</b></div>
+
+  <header class="title">
+    <p class="eyebrow">Daiwa &middot; eging spinning reel</p>
+    <h1>Emeraldas Air <small>PC LT2500-H &middot; 2025</small></h1>
+    <ul class="specs" aria-label="Key specifications">
+      <li><b>175 g</b><span>Weight</span></li>
+      <li><b>5.7 : 1</b><span>Gear ratio</span></li>
+      <li><b>80 cm</b><span>Per handle turn</span></li>
+      <li><b>10 kg</b><span>Max drag</span></li>
+      <li><b>12 + 1</b><span>Bearings</span></li>
+    </ul>
+  </header>
+
+  <aside class="panel" id="panel" aria-label="Reel parts">
+    <section class="detail" id="detail" aria-live="polite"></section>
+    <ul class="parts" id="parts"></ul>
+    <div class="controls">
+      <div class="row">
+        <button class="btn" id="btn-home" type="button">Whole reel</button>
+        <button class="btn" id="btn-spin" type="button" aria-pressed="false">Turn handle</button>
+        <button class="btn" id="btn-xray" type="button" aria-pressed="false">X-ray</button>
+        <button class="btn" id="btn-pins" type="button" aria-pressed="true">Labels</button>
+      </div>
+      <div class="slider">
+        <label for="explode">Explode</label>
+        <input id="explode" type="range" min="0" max="100" value="0">
+      </div>
+      <div class="slider">
+        <label for="speed">Speed</label>
+        <input id="speed" type="range" min="5" max="300" step="5" value="50">
+        <output id="speed-out" for="speed"></output>
+      </div>
+      <p class="note">Modelled in code, not Daiwa CAD. Sizes are scaled from the product photo and are approximate. Part numbers are this page’s own. Not affiliated with Daiwa.</p>
+    </div>
+  </aside>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script>
+(function () {
+'use strict';
+var T = window.THREE;
+var canvas = document.getElementById('stage');
+var app = document.getElementById('app');
+var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ------------------------------------------------------------------ data */
+var GROUPS = {
+  spool:  { label: 'Spool and drag',  view: [2.05, 1.2] },
+  rotor:  { label: 'Rotor and bail',  view: [2.4, 1.1] },
+  body:   { label: 'Body and gears',  view: [2.75, 1.25] },
+  osc:    { label: 'Oscillation',     view: [0.6, 1.3] },
+  handle: { label: 'Handle',          view: [2.85, 1.35] }
+};
+var GROUP_ORDER = ['spool', 'rotor', 'body', 'osc', 'handle'];
+var INFO = {}, ORDER = [], P = {};
+
+/* -------------------------------------------------------------- renderer */
+var renderer;
+try {
+  renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+} catch (err) {
+  var f = document.createElement('p');
+  f.className = 'fail';
+  f.textContent = 'This browser could not start WebGL, so the 3D model cannot be shown.';
+  app.appendChild(f);
+  return;
+}
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.toneMapping = T.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = T.PCFSoftShadowMap;
+
+var scene = new T.Scene();
+var camera = new T.PerspectiveCamera(30, 1, 0.1, 800);
+
+/* Photo-studio environment (soft boxes on a graded backdrop), generated in code. */
+(function buildEnvironment() {
+  var env = new T.Scene();
+  var c = document.createElement('canvas'); c.width = 4; c.height = 256;
+  var g = c.getContext('2d');
+  var grad = g.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.3, '#d5d9de'); grad.addColorStop(0.5, '#8d939b');
+  grad.addColorStop(0.62, '#4a4f57'); grad.addColorStop(1, '#17191d');
+  g.fillStyle = grad; g.fillRect(0, 0, 4, 256);
+  var tex = new T.CanvasTexture(c); tex.colorSpace = T.SRGBColorSpace;
+  env.add(new T.Mesh(new T.SphereGeometry(80, 48, 24), new T.MeshBasicMaterial({ map: tex, side: T.BackSide })));
+  function box(w, h, x, y, z, k) {
+    var m = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({ color: new T.Color(k, k, k), side: T.DoubleSide }));
+    m.position.set(x, y, z); m.lookAt(0, 0, 0); env.add(m);
+  }
+  box(46, 22, 0, 44, -10, 5);        // overhead soft box
+  box(18, 44, 44, 10, -26, 3.6);     // front-left strip (the model's nose points to +X)
+  box(16, 40, -46, 6, -22, 2.6);     // rear strip
+  box(70, 36, 0, 8, -56, 1.5);       // broad fill from the viewer's side
+  box(36, 10, 0, 0, 52, 2.2);        // rim light from behind
+  box(24, 24, 8, -40, -20, 0.7);     // floor bounce
+  var pm = new T.PMREMGenerator(renderer);
+  scene.environment = pm.fromScene(env, 0.045).texture;
+  pm.dispose();
+})();
+scene.add(new T.HemisphereLight(0xffffff, 0x3c4046, 0.45));
+var key = new T.DirectionalLight(0xffffff, 1.5);
+key.position.set(10, 26, -22); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.0006; key.shadow.normalBias = 0.03; key.shadow.radius = 5;
+scene.add(key); scene.add(key.target);
+function fitShadow(center, half) {
+  var s = key.shadow.camera;
+  key.target.position.copy(center); key.position.set(center.x + 10, center.y + 26, center.z - 22);
+  s.left = -half; s.right = half; s.top = half; s.bottom = -half; s.near = 1; s.far = 90 + half * 2;
+  s.updateProjectionMatrix();
+}
+
+/* ------------------------------------------------------------- materials */
+// Colours sampled from the product photo: titanium-grey housing, bright machined
+// aluminium, dark gunmetal guard and drag knob, turquoise anodised rings.
+function metal(color, rough, extra) {
+  var o = { color: color, metalness: 1, roughness: rough, side: T.DoubleSide };
+  if (extra) for (var k in extra) o[k] = extra[k];
+  return new T.MeshPhysicalMaterial(o);
+}
+var MAT = {
+  body:   function () { return metal(0xa9aeb5, 0.36, { metalness: 0.92 }); },
+  silver: function () { return metal(0xdcdfe2, 0.2); },
+  dark:   function () { return metal(0x3a3f47, 0.38, { metalness: 0.85 }); },
+  black:  function () { return metal(0x1c1e22, 0.42, { metalness: 0.7 }); },
+  rubber: function () { return new T.MeshPhysicalMaterial({ color: 0x141517, metalness: 0, roughness: 0.82, side: T.DoubleSide }); },
+  teal:   function () { return metal(0x13a6a6, 0.24, { metalness: 0.9, clearcoat: 0.6, clearcoatRoughness: 0.18 }); },
+  steel:  function () { return metal(0x8d949b, 0.32); },
+  brass:  function () { return metal(0xc0a058, 0.3); },
+  bronze: function () { return metal(0xa9793f, 0.38); },
+  felt:   function () { return new T.MeshPhysicalMaterial({ color: 0x565a5f, metalness: 0, roughness: 1, side: T.DoubleSide }); }
+};
+
+/* ------------------------------------------------------ geometry helpers */
+function latheX(pts, seg) {            // profile as [along-axis, radius], axis = +X
+  var g = new T.LatheGeometry(pts.map(function (p) { return new T.Vector2(p[1], p[0]); }), seg || 128);
+  g.rotateZ(-Math.PI / 2); return g;
+}
+function latheZ(pts, seg) {            // axis = +Z
+  var g = new T.LatheGeometry(pts.map(function (p) { return new T.Vector2(p[1], p[0]); }), seg || 128);
+  g.rotateX(Math.PI / 2); return g;
+}
+function curve(pts, n) {               // resample a profile through a smooth spline
+  var c = new T.SplineCurve(pts.map(function (p) { return new T.Vector2(p[0], p[1]); }));
+  return c.getPoints(n || pts.length * 6).map(function (v) { return [v.x, v.y]; });
+}
+function cylX(r, a, b, seg) { var g = new T.CylinderGeometry(r, r, b - a, seg || 64); g.rotateZ(-Math.PI / 2); g.translate((a + b) / 2, 0, 0); return g; }
+function cylZ(r, a, b, seg) { var g = new T.CylinderGeometry(r, r, b - a, seg || 64); g.rotateX(Math.PI / 2); g.translate(0, 0, (a + b) / 2); return g; }
+function ring(axis, a, rin, rout, t, seg) {   // washer with softened corners, starting at "a" along the axis
+  var e = Math.min(0.02, t / 3);
+  var pts = [[a, rin], [a, rout - e], [a + e, rout], [a + t - e, rout], [a + t, rout - e], [a + t, rin], [a, rin]];
+  return axis === 'x' ? latheX(pts, seg || 96) : latheZ(pts, seg || 96);
+}
+function torusX(r, tube, x) { var g = new T.TorusGeometry(r, tube, 16, 160); g.rotateY(Math.PI / 2); g.translate(x, 0, 0); return g; }
+function torusZ(r, tube, z) { var g = new T.TorusGeometry(r, tube, 16, 160); g.translate(0, 0, z); return g; }
+function rodBetween(a, b, ra, rb) {    // tapered round bar from point a to point b
+  var va = new T.Vector3(a[0], a[1], a[2]), vb = new T.Vector3(b[0], b[1], b[2]);
+  var dir = vb.clone().sub(va), len = dir.length();
+  var g = new T.CylinderGeometry(rb, ra, len, 40);
+  g.applyQuaternion(new T.Quaternion().setFromUnitVectors(new T.Vector3(0, 1, 0), dir.normalize()));
+  g.translate((va.x + vb.x) / 2, (va.y + vb.y) / 2, (va.z + vb.z) / 2);
+  return g;
+}
+// Average normals across faces that meet at less than the crease angle, so bevels and
+// curved walls shade as one continuous surface while real edges stay crisp.
+function smooth(geo, deg) {
+  if (geo.index) geo = geo.toNonIndexed();
+  var pos = geo.attributes.position, n = pos.count, cos = Math.cos((deg || 42) * Math.PI / 180);
+  var fn = new Float32Array(n * 3), fw = new Float32Array(n * 3), out = new Float32Array(n * 3);
+  var a = new T.Vector3(), b = new T.Vector3(), c = new T.Vector3(), map = {}, i, k;
+  for (i = 0; i < n; i += 3) {
+    a.fromBufferAttribute(pos, i); b.fromBufferAttribute(pos, i + 1); c.fromBufferAttribute(pos, i + 2);
+    b.sub(a); c.sub(a); b.cross(c);
+    var len = b.length() || 1;
+    for (k = 0; k < 3; k++) {
+      var j = (i + k) * 3;
+      fw[j] = b.x; fw[j + 1] = b.y; fw[j + 2] = b.z;
+      fn[j] = b.x / len; fn[j + 1] = b.y / len; fn[j + 2] = b.z / len;
+      var key = Math.round(pos.getX(i + k) * 2000) + ',' + Math.round(pos.getY(i + k) * 2000) + ',' + Math.round(pos.getZ(i + k) * 2000);
+      (map[key] || (map[key] = [])).push(i + k);
+    }
+  }
+  for (var id in map) {
+    var list = map[id];
+    for (i = 0; i < list.length; i++) {
+      var v = list[i] * 3, x = 0, y = 0, z = 0;
+      for (k = 0; k < list.length; k++) {
+        var u = list[k] * 3;
+        if (fn[u] * fn[v] + fn[u + 1] * fn[v + 1] + fn[u + 2] * fn[v + 2] >= cos) { x += fw[u]; y += fw[u + 1]; z += fw[u + 2]; }
+      }
+      var l = Math.sqrt(x * x + y * y + z * z) || 1;
+      out[v] = x / l; out[v + 1] = y / l; out[v + 2] = z / l;
+    }
+  }
+  geo.setAttribute('normal', new T.BufferAttribute(out, 3));
+  return geo;
+}
+function extrude(shape, depth, bevel, crease) {
+  var g = new T.ExtrudeGeometry(shape, { depth: depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 8, curveSegments: 48 });
+  g.translate(0, 0, -depth / 2);
+  return smooth(g, crease || 42);
+}
+function splineShape(pts) {            // closed smooth outline through the points
+  var s = new T.Shape();
+  var c = new T.SplineCurve(pts.concat([pts[0]]).map(function (p) { return new T.Vector2(p[0], p[1]); }));
+  // SplineCurve is open; sample it densely and close the loop
+  var sp = new T.CatmullRomCurve3(pts.map(function (p) { return new T.Vector3(p[0], p[1], 0); }), true, 'centripetal').getPoints(pts.length * 14);
+  sp.forEach(function (v, i) { if (i) s.lineTo(v.x, v.y); else s.moveTo(v.x, v.y); });
+  s.closePath(); return s;
+}
+function ribbon(pts) {                 // closed outline from a centre line of [x, y, halfWidth]
+  var c = new T.CatmullRomCurve3(pts.map(function (p) { return new T.Vector3(p[0], p[1], p[2]); }), false, 'centripetal');
+  var n = pts.length * 12, left = [], right = [];
+  for (var i = 0; i <= n; i++) {
+    var p = c.getPoint(i / n), t = c.getTangent(i / n);
+    var l = Math.sqrt(t.x * t.x + t.y * t.y) || 1, nx = -t.y / l, ny = t.x / l;
+    left.push([p.x + nx * p.z, p.y + ny * p.z]); right.push([p.x - nx * p.z, p.y - ny * p.z]);
+  }
+  var s = new T.Shape(), all = left.concat(right.reverse());
+  all.forEach(function (q, k) { if (k) s.lineTo(q[0], q[1]); else s.moveTo(q[0], q[1]); });
+  s.closePath(); return s;
+}
+function mesh(parent, geo, mat, pos, rot) {
+  var m = new T.Mesh(geo, mat);
+  if (pos) m.position.set(pos[0], pos[1], pos[2]);
+  if (rot) m.rotation.set(rot[0], rot[1], rot[2]);
+  m.castShadow = true; m.receiveShadow = true;
+  parent.add(m); return m;
+}
+function bearing(parent, axis, r, w) {         // sealed ball bearing centred on the part origin
+  mesh(parent, ring(axis, -w / 2, r * 0.78, r, w), MAT.silver());
+  mesh(parent, ring(axis, -w / 2 + 0.012, r * 0.52, r * 0.78, w - 0.024), MAT.black());
+  mesh(parent, ring(axis, -w / 2, r * 0.36, r * 0.52, w), MAT.silver());
+}
+function screwZ(parent, pos, dir) {            // small screw, head facing +Z (dir 1) or -Z (dir -1)
+  mesh(parent, latheZ([[0, 0.13], [0.05 * dir, 0.13], [0.08 * dir, 0.09], [0.08 * dir, 0]], 32), MAT.black(), pos);
+  mesh(parent, cylZ(0.06, Math.min(0, -0.3 * dir), Math.max(0, -0.3 * dir), 16), MAT.steel(), pos);
+}
+
+/* ----------------------------------------------------------------- parts */
+// Units are centimetres. Dimensions are scaled from the product photo, calibrated on the
+// 55 mm handle and the 2500 spool: x runs forward from the front of the body, y up from the
+// spool axis. The model is built with the handle on local +Z, then mirrored to the
+// product-photo pose: spool to the left, handle toward the viewer.
+var root = new T.Group(); root.scale.z = -1; scene.add(root);
+
+function def(id, parent, o) {
+  var g = new T.Group(); g.name = id;
+  if (o.at) g.position.set(o.at[0], o.at[1], o.at[2]);
+  parent.add(g);
+  INFO[id] = { name: o.n, group: o.g, text: o.t, facts: o.f || [], view: o.v || GROUPS[o.g].view, internal: !!o.inside };
+  P[id] = { id: id, g: g, ex: new T.Vector3(o.ex[0], o.ex[1], o.ex[2]), meshes: [], anchor: new T.Object3D(), base: null, shell: !!o.shell, internal: !!o.inside };
+  P[id].anchor.position.set(o.pin[0], o.pin[1], o.pin[2]); g.add(P[id].anchor);
+  ORDER.push(id);
+  return g;
+}
+
+var GX = -1.57, GY = 0.75;   // drive gear / handle axis: 7.5 mm above the spool axis
+var ARM = 5.5, HANDLE_REST = 0.615, ROTOR_REST = Math.PI / 2, STROKE = 0.69;
+var BODY_R = 2.05, BODY_HALF = 1.15;
+
+var osc = new T.Group(); root.add(osc);                 // everything that slides with the main shaft
+var rotorSpin = new T.Group(); root.add(rotorSpin);     // everything that turns with the pinion
+var handleSpin = new T.Group(); handleSpin.position.set(GX, GY, 0); root.add(handleSpin);
+
+/* --- Spool and drag ---------------------------------------------------- */
+var FELT = 'Soaked in drag grease, it slips against the metal washers on either side. That controlled slip is the drag.';
+var g, i;
+g = def('dragKnob', osc, { n: 'Drag knob', g: 'spool', shell: true, ex: [21.1, 0, 0], pin: [6.5, 0.5, 0.6],
+  t: 'Screws onto the tip of the main shaft and presses on the washer stack inside the spool. More turns, more pressure, more drag.',
+  f: [['Max drag', '10 kg']] });
+mesh(g, latheX(curve([[5.5, 0.5], [5.5, 0.95], [5.62, 1.02], [5.64, 1.16], [5.78, 1.22], [6.18, 1.18], [6.4, 1.02], [6.48, 0.6], [6.5, 0.36]], 60)), MAT.black());
+for (i = 0; i < 3; i++) mesh(g, smooth(new T.CapsuleGeometry(0.13, 1.9, 6, 16)), MAT.dark(), [6.44, 0, 0], [i * Math.PI / 3, 0, 0]);
+mesh(g, latheX([[6.44, 0.4], [6.56, 0.4], [6.6, 0.34], [6.6, 0]], 64), MAT.silver());
+
+g = def('dragSeal', osc, { n: 'Drag knob seal', g: 'spool', inside: true, ex: [20.35, 0, 0], pin: [5.56, 1.08, 0],
+  t: 'A rubber ring under the knob that keeps salt water and sand out of the drag washers.' });
+mesh(g, torusX(1.08, 0.05, 5.56), MAT.rubber());
+
+g = def('clip', osc, { n: 'Retainer clip', g: 'spool', inside: true, ex: [19.84, 0, 0], pin: [5.46, 1.24, 0],
+  t: 'A spring wire ring that snaps into a groove in the spool and holds the drag washers in place when the knob is off.' });
+mesh(g, torusX(1.24, 0.03, 5.46), MAT.steel());
+
+function washer(id, name, x, ex, kind, text) {
+  var w = def(id, osc, { n: name, g: 'spool', inside: true, ex: [ex, 0, 0], pin: [x + 0.03, 1.0, 0.3], t: text });
+  if (kind === 'felt') mesh(w, ring('x', x, 0.3, 1.2, 0.07), MAT.felt());
+  else {
+    mesh(w, ring('x', x, 0.22, 1.18, 0.05), MAT.silver());
+    if (kind === 'ear') { mesh(w, new T.BoxGeometry(0.05, 0.28, 0.3), MAT.silver(), [x + 0.025, 1.22, 0]); mesh(w, new T.BoxGeometry(0.05, 0.28, 0.3), MAT.silver(), [x + 0.025, -1.22, 0]); }
+  }
+}
+washer('wTop', 'Keyed drag washer', 5.34, 19.36, 'key', 'Locked to the main shaft by its shaped centre hole, so it cannot turn. The knob presses on this one first.');
+washer('felt1', 'Felt drag washer', 5.26, 18.94, 'felt', FELT);
+washer('wEar', 'Eared drag washer', 5.18, 18.52, 'ear', 'Its two ears sit in slots in the spool, so it turns with the spool while the keyed washers stay still.');
+washer('felt2', 'Felt drag washer', 5.1, 18.1, 'felt', FELT);
+washer('wKey', 'Keyed drag washer', 5.02, 17.68, 'key', 'A second washer locked to the main shaft. Alternating fixed and turning washers multiplies the friction surface.');
+washer('felt3', 'Felt drag washer', 4.94, 17.26, 'felt', FELT);
+
+g = def('spool', osc, { n: 'Spool', g: 'spool', shell: true, ex: [15.9, 0, 0], pin: [2.6, 1.65, 1.62],
+  t: 'A shallow 2500-size spool for thin braid. The long skirt slides over the rotor, the ribbed arbor holds the line, and the cup at the front houses the drag stack.',
+  f: [['Capacity', 'PE 0.8 – 200 m'], ['Size', 'LT 2500'], ['Family', 'Airdrive spool']] });
+mesh(g, latheX([[1.62, 2.17], [1.63, 2.27], [1.68, 2.3], [3.62, 2.3], [3.72, 2.26], [3.78, 2.14], [3.8, 1.86], [3.84, 1.8], [5.28, 1.8], [5.32, 1.86], [5.34, 2.16],
+  [5.38, 2.26], [5.46, 2.3], [5.56, 2.27], [5.61, 2.18], [5.62, 1.34], [5.58, 1.3], [4.9, 1.3], [4.9, 0.35], [3.9, 0.35], [3.9, 0.6], [3.8, 0.6]], 160), MAT.silver());
+for (i = 0; i < 13; i++) mesh(g, torusX(1.803, 0.014, 3.96 + i * 0.105), MAT.steel());
+mesh(g, torusX(2.24, 0.075, 5.6), MAT.teal());
+mesh(g, torusX(2.3, 0.03, 1.72), MAT.teal());
+
+g = def('spoolBearing', osc, { n: 'Spool bearing', g: 'spool', inside: true, at: [4.2, 0, 0], ex: [12.6, 0, 0], pin: [0, 0.5, 0],
+  t: 'Carries the spool on the main shaft so it turns freely and evenly when the drag slips.' });
+bearing(g, 'x', 0.55, 0.22);
+
+g = def('click', osc, { n: 'Drag click wheel', g: 'spool', inside: true, ex: [12.4, 0, 0], pin: [3.66, 0.7, 0],
+  t: 'A toothed wheel keyed to the shaft behind the spool. A small pawl in the spool ticks over its teeth, which is the sound you hear when line is pulled.' });
+mesh(g, ring('x', 3.6, 0.12, 0.62, 0.12, 64), MAT.brass());
+for (i = 0; i < 18; i++) { var ca = i / 18 * Math.PI * 2; mesh(g, new T.BoxGeometry(0.12, 0.1, 0.12), MAT.brass(), [3.66, Math.cos(ca) * 0.66, Math.sin(ca) * 0.66], [ca, 0, 0]); }
+
+g = def('shims', osc, { n: 'Spool shims', g: 'spool', inside: true, ex: [11.9, 0, 0], pin: [3.5, 0.42, 0],
+  t: 'Thin washers behind the spool. Adding or removing one moves the spool forward or back and changes how the line stacks, flat or tapered.' });
+mesh(g, ring('x', 3.48, 0.12, 0.42, 0.03, 48), MAT.silver());
+mesh(g, ring('x', 3.53, 0.12, 0.42, 0.03, 48), MAT.brass());
+
+/* --- Rotor and bail ---------------------------------------------------- */
+g = def('nut', rotorSpin, { n: 'Rotor nut', g: 'rotor', inside: true, ex: [12.8, 0, 0], pin: [1.4, 0.42, 0],
+  t: 'Clamps the rotor onto the pinion gear. It hides under the spool.' });
+var hex = new T.CylinderGeometry(0.44, 0.44, 0.22, 6); hex.rotateZ(-Math.PI / 2); hex.translate(1.42, 0, 0);
+mesh(g, hex, MAT.steel());
+
+g = def('nutLock', rotorSpin, { n: 'Rotor nut lock', g: 'rotor', inside: true, ex: [13.25, 0, 0], pin: [1.6, 0.55, 0],
+  t: 'A small plate and screw that stop the rotor nut from backing off with vibration.' });
+mesh(g, new T.BoxGeometry(0.05, 1.3, 0.5), MAT.black(), [1.57, 0.25, 0]);
+mesh(g, cylX(0.11, 1.59, 1.66, 24), MAT.steel(), [0, 0.72, 0]);
+
+g = def('rotor', rotorSpin, { n: 'Rotor', g: 'rotor', shell: true, ex: [9.3, 0, 0], pin: [0.7, 0, -2.05],
+  t: 'Spins around the spool and carries the bail. Each handle turn takes it round 5.7 times. The open arms keep it light so it starts and stops quickly.',
+  f: [['Speed', '5.7 turns per handle turn'], ['Retrieve', '80 cm per handle turn'], ['Family', 'Airdrive rotor']] });
+mesh(g, latheX([[0.05, 1.25], [0.05, 2.44], [0.08, 2.5], [0.14, 2.5], [0.17, 2.44], [0.19, 2.1], [0.25, 2.04], [1.16, 2.02], [1.26, 1.94], [1.3, 1.8], [1.3, 0.5]], 160), MAT.body());
+mesh(g, torusX(2.5, 0.03, 0.11), MAT.teal());
+(function () {
+  // One arm, drawn in the plane through the axis: [x, radius]. The inner edge clears the spool skirt.
+  var arm = splineShape([[0.1, 2.2], [0.24, 2.86], [1.3, 3.14], [2.5, 3.12], [3.3, 3.04], [3.6, 2.86], [3.56, 2.62], [3.0, 2.56], [1.9, 2.56], [1.0, 2.55], [0.5, 2.52], [0.22, 2.44]]);
+  var win = new T.CatmullRomCurve3([[1.45, 2.74], [1.55, 2.94], [2.4, 2.95], [3.0, 2.88], [3.05, 2.74], [2.4, 2.72]].map(function (p) { return new T.Vector3(p[0], p[1], 0); }), true, 'centripetal').getPoints(60);
+  var hole = new T.Path(); win.forEach(function (v, k) { if (k) hole.lineTo(v.x, v.y); else hole.moveTo(v.x, v.y); }); hole.closePath();
+  arm.holes.push(hole);
+  var geo = extrude(arm, 0.95, 0.14, 50);
+  mesh(g, geo, MAT.body()); mesh(g, geo, MAT.body(), null, [Math.PI, 0, 0]);
+  mesh(g, smooth(new T.CapsuleGeometry(0.1, 1.2, 6, 16)), MAT.teal(), [2.25, -2.83, 0], [0, 0, Math.PI / 2]);   // balance weight in the plain arm
+})();
+
+g = def('friction', root, { n: 'Rotor friction ring', g: 'rotor', inside: true, ex: [8.7, 0, 0], pin: [0.1, 1.35, 0],
+  t: 'A rubber ring on the body that brushes the rotor lightly, so the rotor does not spin on its own when the bail is open for a cast.' });
+mesh(g, torusX(1.35, 0.06, 0.1), MAT.rubber());
+
+var RX = 3.85, RY = 2.85, WIRE_R = 4.5;   // line roller position on the bail arm, bail wire reach
+g = def('lever', rotorSpin, { n: 'Bail arm lever', g: 'rotor', ex: [9.3, 2.0, 0], pin: [3.5, 3.3, 0.5],
+  t: 'Pivots on the rotor arm and carries the line roller. Flipping it open releases the line for a cast.' });
+mesh(g, extrude(splineShape([[2.95, 2.95], [3.3, 3.3], [3.9, 3.34], [4.28, 3.05], [4.25, 2.62], [3.85, 2.5], [3.3, 2.62]]), 0.26, 0.09, 60), MAT.silver(), [0, 0, 0.56]);
+
+g = def('leverScrew', rotorSpin, { n: 'Lever screw', g: 'rotor', ex: [9.3, 2.0, 1.0], pin: [3.3, 3.0, 0.86],
+  t: 'The pivot screw for the bail arm lever.' });
+screwZ(g, [3.3, 2.98, 0.78], 1);
+
+g = def('collarA', rotorSpin, { n: 'Roller collar', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -0.55], pin: [0, 0.24, 0.3],
+  t: 'A spacer that centres the line roller and its bearing on the lever.' });
+mesh(g, ring('z', 0.27, 0.08, 0.24, 0.07, 32), MAT.black());
+
+g = def('rollerBearing', rotorSpin, { n: 'Line roller bearing', g: 'rotor', inside: true, at: [RX, RY, 0.02], ex: [9.3, 2.0, -1.1], pin: [0, 0.17, 0],
+  t: 'A tiny ball bearing inside the line roller. It lets the roller turn under load so the braid is not dragged across a fixed surface.' });
+bearing(g, 'z', 0.17, 0.2);
+
+g = def('roller', rotorSpin, { n: 'Line roller', g: 'rotor', shell: true, at: [RX, RY, 0], ex: [9.3, 2.0, -1.75], pin: [0, 0.3, 0],
+  t: 'The only place the line touches the reel under load. Its waisted shape keeps the braid centred and feeds it onto the spool without twist. Rinse it after salt water.' });
+mesh(g, latheZ(curve([[-0.22, 0.3], [-0.16, 0.22], [0.0, 0.19], [0.18, 0.21], [0.27, 0.3]], 30), 64), MAT.silver());
+
+g = def('collarB', rotorSpin, { n: 'Roller collar', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -2.4], pin: [0, 0.24, -0.26],
+  t: 'The outer spacer, between the line roller and the end of the bail wire.' });
+mesh(g, ring('z', -0.29, 0.08, 0.24, 0.07, 32), MAT.black());
+
+g = def('wire', rotorSpin, { n: 'Bail wire', g: 'rotor', ex: [10.6, 0, -3.6], pin: [3.7, 0, -WIRE_R],
+  t: 'Catches the line when you close the bail and guides it down to the roller. Thin and light so the rotor stays balanced.',
+  f: [['Family', 'Airdrive bail']] });
+(function () {
+  var pts = [];
+  for (var k = 0; k <= 40; k++) {
+    var t = k / 40 * Math.PI;
+    pts.push(new T.Vector3(RX - Math.sin(t) * 0.15, Math.cos(t) * RY, -0.45 * (1 - k / 40) - Math.sin(t) * WIRE_R));
+  }
+  mesh(g, new T.TubeGeometry(new T.CatmullRomCurve3(pts), 200, 0.07, 16), MAT.silver());
+  mesh(g, latheZ(curve([[-0.29, 0.26], [-0.36, 0.25], [-0.5, 0.12], [-0.54, 0]], 20), 48), MAT.silver(), [RX, RY, 0]);
+})();
+
+g = def('holder', rotorSpin, { n: 'Bail holder', g: 'rotor', ex: [9.3, -2.0, 0], pin: [3.6, -3.1, 0.2],
+  t: 'The hinge at the far end of the bail wire, on the opposite rotor arm.' });
+mesh(g, new T.SphereGeometry(0.3, 48, 32), MAT.silver(), [RX - 0.1, -RY, 0]).scale.set(1.35, 0.95, 1.15);
+
+g = def('holderScrew', rotorSpin, { n: 'Holder screw', g: 'rotor', ex: [9.3, -2.0, 1.0], pin: [RX - 0.1, -RY, 0.44],
+  t: 'Fixes the bail holder to its rotor arm and acts as its pivot.' });
+screwZ(g, [RX - 0.1, -RY, 0.36], 1);
+
+g = def('spring', rotorSpin, { n: 'Bail spring', g: 'rotor', ex: [9.3, 1.2, 1.8], pin: [2.2, 2.9, 0],
+  t: 'Sits inside the rotor arm and snaps the bail fully open or fully shut, so it never rests halfway.' });
+(function () {
+  var pts = [];
+  for (var k = 0; k <= 200; k++) { var t = k / 200; pts.push(new T.Vector3(1.65 + t * 1.25, 2.84 + Math.cos(t * 56) * 0.075, Math.sin(t * 56) * 0.075)); }
+  mesh(g, new T.TubeGeometry(new T.CatmullRomCurve3(pts), 500, 0.016, 8), MAT.bronze());
+  mesh(g, cylX(0.035, 1.6, 2.95, 12), MAT.steel(), [0, 2.84, 0]);
+})();
+
+/* --- Body and gears ---------------------------------------------------- */
+g = def('body', root, { n: 'Body, stem and foot', g: 'body', shell: true, ex: [0, 0, 0], pin: [-0.4, 4.2, 0.36],
+  t: 'One rigid shell that holds the gears in line. The stem and the foot that slides into the rod’s reel seat are part of the same piece. Total reel weight is 175 g.',
+  f: [['Reel weight', '175 g'], ['Concept', 'LT (light, tough)']], v: [2.75, 1.25] });
+(function () {
+  // round gear housing, filleted on both faces
+  var h = BODY_HALF, r = BODY_R;
+  mesh(g, latheZ([[-h, 0.6], [-h, r - 0.42], [-h + 0.05, r - 0.25], [-h + 0.18, r - 0.1], [-h + 0.4, r], [h - 0.45, r], [h - 0.28, r - 0.06], [h - 0.16, r - 0.2], [h - 0.12, r - 0.4]], 192), MAT.body(), [GX, GY, 0]);
+  // neck toward the rotor
+  mesh(g, latheX(curve([[-2.2, 1.08], [-0.6, 1.1], [-0.3, 1.2], [-0.12, 1.28], [-0.02, 1.2], [0, 1.05]], 40), 128), MAT.body());
+  // lower belly that carries the oscillation gear
+  mesh(g, extrude(splineShape([[-3.2, 1.2], [-3.75, 0.2], [-3.6, -0.8], [-2.9, -1.45], [-1.6, -1.6], [-0.7, -1.15], [-0.5, -0.2], [-1.2, 0.4], [-2.2, 1.0]]), 1.5, 0.3, 60), MAT.body());
+  // stem: rises from the housing and sweeps forward under the foot
+  mesh(g, extrude(ribbon([[-2.1, 2.2, 1.0], [-1.45, 2.9, 0.72], [-0.6, 3.75, 0.5], [0.2, 4.7, 0.36], [0.72, 5.9, 0.3], [0.82, 7.0, 0.31], [0.82, 7.85, 0.5]]), 0.42, 0.2, 60), MAT.body());
+  // foot
+  var foot = new T.Shape();
+  foot.moveTo(-2.2, 8.12); foot.quadraticCurveTo(-2.3, 8.26, -2.1, 8.26); foot.lineTo(4.1, 8.26); foot.quadraticCurveTo(4.3, 8.26, 4.2, 8.12);
+  foot.quadraticCurveTo(2.6, 7.86, 1.5, 7.7); foot.lineTo(0.2, 7.7); foot.quadraticCurveTo(-1.0, 7.86, -2.2, 8.12);
+  var fg = extrude(foot, 0.86, 0.14, 60);
+  // the top of the foot is curved to sit against the rod blank
+  (function (geo) { var p = geo.attributes.position; for (var k = 0; k < p.count; k++) { var z = p.getZ(k); p.setY(k, p.getY(k) - 0.22 * z * z * (p.getY(k) > 8.0 ? 1 : 0.4)); } p.needsUpdate = true; smooth(geo, 60); })(fg);
+  mesh(g, fg, MAT.body());
+})();
+// Ghost of the rod, for context only
+(function () {
+  var m = new T.Mesh(cylX(0.5, -5.5, 7.5, 48), new T.MeshStandardMaterial({ color: 0x8c949c, transparent: true, opacity: 0.14, roughness: 0.6, depthWrite: false }));
+  m.position.set(0, 8.8, 0); root.add(m);
+})();
+
+g = def('guard', root, { n: 'Rear guard', g: 'body', shell: true, ex: [-3.6, -2.4, 0], pin: [-4.4, -0.3, 0.8],
+  t: 'A cover over the back of the body. It takes the knocks when the reel is put down on rocks or a deck.' });
+(function () {
+  var s = new T.Shape(), out = new T.CatmullRomCurve3([[-3.0, 2.25], [-3.9, 1.5], [-4.5, 0.3], [-4.7, -0.8], [-4.2, -1.55], [-3.0, -1.85], [-1.7, -1.85], [-0.95, -1.5]]
+    .map(function (p) { return new T.Vector3(p[0], p[1], 0); }), false, 'centripetal').getPoints(80);
+  out.forEach(function (v, k) { if (k) s.lineTo(v.x, v.y); else s.moveTo(v.x, v.y); });
+  s.lineTo(-1.25, -1.2); s.absarc(GX, GY, BODY_R - 0.08, -1.41, 2.3, true); s.closePath();
+  mesh(g, extrude(s, 1.7, 0.26, 60), MAT.dark());
+})();
+
+g = def('guardScrews', root, { n: 'Guard screws', g: 'body', ex: [-5.2, -3.0, 0], pin: [-4.72, -0.3, 0],
+  t: 'Two screws that fix the rear guard to the body.', f: [['Quantity', '2']] });
+mesh(g, cylX(0.12, -4.74, -4.68, 24), MAT.black(), [0, -0.3, 0]); mesh(g, cylX(0.06, -4.68, -4.3, 16), MAT.steel(), [0, -0.3, 0]);
+mesh(g, cylX(0.12, -4.5, -4.44, 24), MAT.black(), [0, -1.2, 0]); mesh(g, cylX(0.06, -4.44, -4.1, 16), MAT.steel(), [0, -1.2, 0]);
+
+g = def('frontPlate', root, { n: 'Front retainer plate', g: 'body', shell: true, ex: [8.3, 0, 0], pin: [0.0, 1.2, 0],
+  t: 'Bolts to the front of the body and holds the anti-reverse clutch and the front pinion bearing in place.' });
+mesh(g, ring('x', -0.3, 0.42, 1.2, 0.36, 96), MAT.black());
+for (i = 0; i < 3; i++) { var pa = i / 3 * Math.PI * 2 + 0.5; mesh(g, cylX(0.1, 0.05, 0.1, 16), MAT.steel(), [0, Math.cos(pa) * 0.98, Math.sin(pa) * 0.98]); }
+
+g = def('clutch', root, { n: 'Anti-reverse clutch', g: 'body', inside: true, ex: [6.9, 0, 0], pin: [0.35, 0.8, 0],
+  t: 'A one-way roller bearing. Its rollers free-wheel when you wind in and jam instantly the other way, so the handle cannot turn backwards. This is the “+1” in the bearing count.',
+  f: [['Type', 'Roller bearing']] });
+mesh(g, ring('x', 0.1, 0.52, 0.8, 0.5, 64), MAT.black());
+for (i = 0; i < 8; i++) { var ra = i / 8 * Math.PI * 2; mesh(g, cylX(0.07, 0.14, 0.56, 16), MAT.silver(), [0, Math.cos(ra) * 0.48, Math.sin(ra) * 0.48]); }
+
+g = def('sleeve', rotorSpin, { n: 'Clutch sleeve', g: 'body', inside: true, ex: [6.1, 0, 0], pin: [0.35, 0.4, 0],
+  t: 'A hardened collar on the pinion that the clutch rollers grip. It turns with the rotor.' });
+mesh(g, ring('x', 0.08, 0.21, 0.4, 0.54, 48), MAT.silver());
+
+g = def('bearingPF', root, { n: 'Pinion bearing, front', g: 'body', inside: true, at: [-0.14, 0, 0], ex: [5.7, 0, 0], pin: [0, 0.55, 0],
+  t: 'Supports the front of the pinion gear. Daiwa lists two stainless ball bearings on the pinion.' });
+bearing(g, 'x', 0.55, 0.22);
+
+g = def('pinion', rotorSpin, { n: 'Pinion gear', g: 'body', inside: true, ex: [2.2, 0, 0], pin: [-0.7, 0.36, 0.1],
+  t: 'A hollow gear on the reel’s centre line. The drive gear spins it, it spins the rotor, and the main shaft slides through its middle.' });
+mesh(g, cylX(0.3, -1.3, -0.26, 48), MAT.brass());
+mesh(g, cylX(0.2, -1.62, 1.56, 48), MAT.brass());
+(function () {
+  var tooth = new T.BoxGeometry(1.0, 0.1, 0.12), m = MAT.brass();
+  for (var k = 0; k < 9; k++) { var a = k / 9 * Math.PI * 2; mesh(g, tooth, m, [-0.78, Math.cos(a) * 0.34, Math.sin(a) * 0.34], [a + Math.PI / 2, 0.12, 0]); }
+})();
+
+g = def('bearingPR', root, { n: 'Pinion bearing, rear', g: 'body', inside: true, at: [-1.45, 0, 0], ex: [0, 0, 0], pin: [0, 0.42, 0],
+  t: 'Supports the back of the pinion gear inside the body.' });
+bearing(g, 'x', 0.42, 0.2);
+
+g = def('shaft', osc, { n: 'Main shaft', g: 'body', inside: true, ex: [0, 0, 0], pin: [-2.1, 0.11, 0],
+  t: 'Runs from the back of the body through the pinion to the spool. It does not rotate. It slides forward and back as you wind, which lays the line evenly.',
+  f: [['Family', 'Airdrive shaft']] });
+mesh(g, cylX(0.11, -3.0, 6.0, 32), MAT.silver());
+mesh(g, cylX(0.09, 6.0, 6.36, 24), MAT.steel());
+
+g = def('gear', handleSpin, { n: 'Drive gear', g: 'body', inside: true, ex: [0, 0, 2.6], pin: [0.95, 0.95, 0.7], v: [2.6, 1.15],
+  t: 'The large gear turned directly by the handle. The teeth on its face mesh with the pinion and set the 5.7 : 1 ratio. The small gear on its shaft drives the oscillation.',
+  f: [['Ratio', '5.7 : 1'], ['Support', '2 ball bearings']] });
+mesh(g, latheZ([[0.5, 0.22], [0.5, 1.5], [0.54, 1.55], [0.66, 1.55], [0.7, 1.5], [0.7, 0.22]], 128), MAT.silver());
+mesh(g, cylZ(0.22, -1.0, 1.02, 40), MAT.steel());
+mesh(g, cylZ(0.3, -0.78, -0.56, 32), MAT.brass());
+(function () {
+  var tooth = new T.BoxGeometry(0.3, 0.075, 0.16), m = MAT.silver();
+  for (var k = 0; k < 52; k++) { var a = k / 52 * Math.PI * 2; mesh(g, tooth, m, [Math.cos(a) * 1.38, Math.sin(a) * 1.38, 0.42], [0, 0, a]); }
+})();
+
+g = def('bearingGA', root, { n: 'Drive gear bearing, plate side', g: 'body', inside: true, at: [GX, GY, 0.86], ex: [0, 0, 3.9], pin: [0, 0.48, 0],
+  t: 'Sits in the side plate and carries the handle end of the drive gear.' });
+bearing(g, 'z', 0.48, 0.2);
+
+g = def('oring', root, { n: 'Side plate seal', g: 'body', inside: true, at: [GX, GY, 0], ex: [0, 0, 4.6], pin: [0, 1.62, 0.99],
+  t: 'An O-ring between the side plate and the body that keeps water out of the gear box.' });
+mesh(g, torusZ(1.62, 0.04, 0.99), MAT.rubber());
+
+g = def('plate', root, { n: 'Side plate', g: 'body', shell: true, at: [GX, GY, 0], ex: [0, 0, 5.4], pin: [1.05, 0.9, 1.2], v: [2.9, 1.35],
+  t: 'A large round plate that screws into the body like a lid. It closes the gear box and supports the drive gear. The turquoise ring marks its edge.' });
+mesh(g, latheZ([[1.0, 1.7], [1.12, 1.7], [1.17, 1.66], [1.19, 1.56], [1.19, 1.3], [1.22, 1.24], [1.25, 1.12], [1.3, 1.02], [1.33, 0.84], [1.39, 0.74], [1.47, 0.66], [1.5, 0.56], [1.5, 0.3]], 192), MAT.silver());
+mesh(g, torusZ(1.64, 0.075, 1.14), MAT.teal());
+mesh(g, torusZ(1.42, 0.012, 1.19), MAT.steel());
+
+g = def('bearingGB', root, { n: 'Drive gear bearing, body side', g: 'body', inside: true, at: [GX, GY, -0.9], ex: [0, 0, -1.5], pin: [0, 0.48, 0], v: GROUPS.osc.view,
+  t: 'Sits in the closed side of the body and carries the far end of the drive gear.' });
+bearing(g, 'z', 0.48, 0.2);
+
+g = def('cap', root, { n: 'Handle screw cap', g: 'body', at: [GX, GY, 0], ex: [0, 0, -2.6], pin: [0, 0.4, -1.45], v: GROUPS.osc.view,
+  t: 'Covers the unused end of the drive gear. Swap it with the handle to change between left-hand and right-hand winding.' });
+mesh(g, latheZ(curve([[-BODY_HALF, 0.62], [-1.3, 0.6], [-1.4, 0.5], [-1.44, 0.3], [-1.45, 0]], 24), 96), MAT.silver());
+mesh(g, torusZ(0.58, 0.035, -1.22), MAT.teal());
+
+/* --- Oscillation ------------------------------------------------------- */
+var OX = -2.75, OY = 0.2;
+g = def('oscGear', root, { n: 'Oscillation gear', g: 'osc', inside: true, at: [OX, OY, 0], ex: [-0.6, -3.6, 0], pin: [0.6, 0.6, -0.6],
+  t: 'Driven by the small gear on the drive shaft. The pin on its face travels in a circle and pushes the slider back and forth.' });
+var oscSpin = new T.Group(); g.add(oscSpin);
+mesh(oscSpin, ring('z', -0.76, 0.1, 1.0, 0.16, 96), MAT.brass());
+mesh(oscSpin, cylZ(0.09, -0.6, -0.34, 20), MAT.steel(), [0, -STROKE, 0]);
+mesh(oscSpin, cylZ(0.12, -0.95, -0.5, 20), MAT.steel());
+
+g = def('slider', osc, { n: 'Oscillation slider', g: 'osc', inside: true, ex: [-2.2, 0, 0], pin: [OX + STROKE, 0.6, -0.36],
+  t: 'Clamped to the back of the main shaft. Its slot rides on the oscillation gear’s pin, turning the gear’s rotation into the in-and-out stroke of the spool.' });
+mesh(g, new T.BoxGeometry(0.3, 2.0, 0.12), MAT.steel(), [OX + STROKE, OY, -0.42]);
+mesh(g, new T.BoxGeometry(0.5, 0.42, 0.5), MAT.steel(), [OX + STROKE, 0, -0.12]);
+screwZ(g, [OX + STROKE, 0, 0.13], 1);
+
+g = def('rod', root, { n: 'Slider guide', g: 'osc', inside: true, ex: [-1.0, 0, -2.4], pin: [-2.0, -0.6, -0.3],
+  t: 'A pin fixed in the body that keeps the slider running straight.' });
+mesh(g, cylX(0.06, -3.4, -0.5, 16), MAT.silver(), [0, -0.6, -0.3]);
+
+/* --- Handle ------------------------------------------------------------ */
+g = def('collar', handleSpin, { n: 'Handle collar', g: 'handle', ex: [0, 0, 6.4], pin: [0, 0.5, 1.6],
+  t: 'A sealing collar between the handle and the side plate.' });
+mesh(g, ring('z', 1.5, 0.3, 0.5, 0.14, 48), MAT.black());
+
+g = def('handle', handleSpin, { n: 'Handle', g: 'handle', ex: [0, 0, 7.4], pin: [0, -2.7, 2.45],
+  t: 'A machined arm that screws straight into the drive gear, so there is no play between hand and gear. The H in the model name marks the high-speed 5.7 : 1 ratio.',
+  f: [['Length', '55 mm'], ['Gear ratio', '5.7 : 1'], ['Side', 'Swappable left / right']] });
+(function () {
+  mesh(g, latheZ(curve([[1.64, 0.4], [1.72, 0.56], [1.9, 0.6], [2.06, 0.52], [2.16, 0.32], [2.18, 0]], 40), 96), MAT.silver());
+  mesh(g, rodBetween([0, 0, 1.92], [0, -ARM, 2.5], 0.3, 0.2), MAT.silver());
+  mesh(g, new T.SphereGeometry(0.2, 32, 24), MAT.silver(), [0, -ARM, 2.5]);
+  mesh(g, cylZ(0.11, 2.5, 3.95, 24), MAT.steel(), [0, -ARM, 0]);
+  mesh(g, ring('z', 2.6, 0.11, 0.26, 0.12, 32), MAT.silver(), [0, -ARM, 0]);
+})();
+
+g = def('knobBearingA', handleSpin, { n: 'Knob bearing, inner', g: 'handle', inside: true, at: [0, -ARM, 2.95], ex: [0, 0, 9.2], pin: [0, 0.3, 0],
+  t: 'One of two ball bearings the knob spins on.' });
+bearing(g, 'z', 0.3, 0.16);
+
+g = def('knob', handleSpin, { n: 'Handle knob', g: 'handle', shell: true, at: [0, -ARM, 0], ex: [0, 0, 10.2], pin: [0, 1.15, 3.85],
+  t: 'A round, flat knob that is easy to find without looking and comfortable to pinch through a long session of jerks and fast slack recovery.' });
+mesh(g, latheZ(curve([[2.76, 0.34], [2.78, 0.9], [2.9, 1.22], [3.15, 1.35], [3.55, 1.35], [3.8, 1.22], [3.93, 0.95], [3.95, 0.78]], 60), 128), MAT.rubber());
+
+g = def('knobBearingB', handleSpin, { n: 'Knob bearing, outer', g: 'handle', inside: true, at: [0, -ARM, 3.7], ex: [0, 0, 11.2], pin: [0, 0.3, 0],
+  t: 'The second knob bearing, under the cap.' });
+bearing(g, 'z', 0.3, 0.16);
+
+g = def('knobScrew', handleSpin, { n: 'Knob screw', g: 'handle', inside: true, ex: [0, 0, 11.8], pin: [0.13, -ARM, 3.95],
+  t: 'Holds the knob on its axle. It sits under the knob cap.' });
+screwZ(g, [0, -ARM, 3.88], 1);
+
+g = def('knobCap', handleSpin, { n: 'Knob cap', g: 'handle', at: [0, -ARM, 0], ex: [0, 0, 12.5], pin: [0.4, 0.4, 4.05],
+  t: 'A metal cap that closes the knob. The two holes take a pin tool for removing it.' });
+mesh(g, latheZ(curve([[3.93, 0.8], [3.99, 0.78], [4.04, 0.6], [4.06, 0.3], [4.06, 0]], 30), 96), MAT.silver());
+mesh(g, cylZ(0.07, 4.0, 4.062, 20), MAT.black(), [0.32, 0, 0]); mesh(g, cylZ(0.07, 4.0, 4.062, 20), MAT.black(), [-0.32, 0, 0]);
+
+/* --- finish ------------------------------------------------------------ */
+// Centre lines for the exploded view, like the dashed lines on a parts diagram
+var axes = new T.Group(); root.add(axes);
+(function () {
+  function dashed(a, b) {
+    var geo = new T.BufferGeometry().setFromPoints([new T.Vector3(a[0], a[1], a[2]), new T.Vector3(b[0], b[1], b[2])]);
+    var l = new T.Line(geo, new T.LineDashedMaterial({ color: 0x13a6a6, dashSize: 0.3, gapSize: 0.2, transparent: true, opacity: 0 }));
+    l.computeLineDistances(); axes.add(l);
+  }
+  var kx = GX + Math.sin(HANDLE_REST) * ARM, ky = GY - Math.cos(HANDLE_REST) * ARM;
+  dashed([-6.5, 0, 0], [28.5, 0, 0]);
+  dashed([GX, GY, -4.4], [GX, GY, 17.4]);
+  dashed([kx, ky, 9.6], [kx, ky, 17.4]);
+})();
+
+ORDER.sort(function (a, b) { return GROUP_ORDER.indexOf(INFO[a].group) - GROUP_ORDER.indexOf(INFO[b].group); });
+var pickables = [];
+root.updateMatrixWorld(true);
+ORDER.forEach(function (id) {
+  var p = P[id]; p.base = p.g.position.clone();
+  var size = new T.Box3(), inv = new T.Matrix4().copy(p.g.matrixWorld).invert(), rel = new T.Matrix4(), bb = new T.Box3();
+  p.g.traverse(function (o) {
+    if (!o.isMesh) return;
+    o.userData.part = id; o.material = o.material.clone();
+    p.meshes.push(o); pickables.push(o);
+    o.geometry.computeBoundingBox();
+    size.union(bb.copy(o.geometry.boundingBox).applyMatrix4(rel.multiplyMatrices(inv, o.matrixWorld)));
+  });
+  // approximate envelope of the part in millimetres, largest dimension first
+  var d = size.getSize(new T.Vector3()).toArray().sort(function (a, b) { return b - a; }).map(function (v) { v *= 10; return v >= 10 ? String(Math.round(v)) : v.toFixed(1); });
+  INFO[id].facts = INFO[id].facts.concat([['Approx. size', d.join(' × ') + ' mm']]);
+});
+
+/* ---------------------------------------------------------------- camera */
+var cur = { target: new T.Vector3(), r: 30, theta: 2.84, phi: 1.44 };
+var goal = { target: new T.Vector3(), r: 30, theta: 2.84, phi: 1.44 };
+var home = { target: new T.Vector3(), r: 30, theta: 2.84, phi: 1.44 };
+var R_MIN = 1.2, R_MAX = 220;
+var view = { w: 1, h: 1, offX: 0, offY: 0, fx: 1, fy: 1 };
+var box = new T.Box3(), sph = new T.Sphere(), v3 = new T.Vector3();
+
+function partBox(id) {
+  box.makeEmpty();
+  P[id].meshes.forEach(function (m) { box.expandByObject(m); });
+  return box;
+}
+function fitRadius(radius) {
+  var half = camera.fov * Math.PI / 360;
+  var t = Math.tan(half);   // usable area is the part of the screen the panel and title leave free
+  return radius / Math.sin(Math.min(Math.atan(t * view.fy), Math.atan(t * view.fx)));
+}
+function nearestAngle(a, ref) { return a + Math.PI * 2 * Math.round((ref - a) / (Math.PI * 2)); }
+function computeHome() {
+  box.makeEmpty();
+  pickables.forEach(function (m) { box.expandByObject(m); });
+  box.getBoundingSphere(sph);
+  home.target.copy(sph.center);
+  home.r = Math.min(R_MAX, fitRadius(sph.radius * 0.9));
+  fitShadow(sph.center, sph.radius * 1.05);
+}
+function goHome(instant) {
+  computeHome();
+  goal.target.copy(home.target); goal.r = home.r;
+  goal.theta = nearestAngle(home.theta, cur.theta); goal.phi = home.phi;
+  if (instant) snap();
+}
+function snap() { cur.target.copy(goal.target); cur.r = goal.r; cur.theta = goal.theta; cur.phi = goal.phi; }
+function flyTo(id) {
+  partBox(id).getBoundingSphere(sph);
+  goal.target.copy(sph.center);
+  goal.r = Math.max(4.5, Math.min(R_MAX, fitRadius(sph.radius * 1.9)));
+  var pv = INFO[id].view;
+  goal.theta = nearestAngle(pv[0], cur.theta); goal.phi = pv[1];
+}
+function applyCamera() {
+  var sp = Math.sin(cur.phi);
+  camera.position.set(cur.target.x + cur.r * sp * Math.sin(cur.theta), cur.target.y + cur.r * Math.cos(cur.phi), cur.target.z + cur.r * sp * Math.cos(cur.theta));
+  camera.lookAt(cur.target);
+  camera.updateMatrixWorld();
+}
+function resize() {
+  var w = app.clientWidth, h = app.clientHeight;
+  if (!w || !h) return;
+  var pr = document.getElementById('panel').getBoundingClientRect(), ar = app.getBoundingClientRect();
+  var tr = document.querySelector('.title').getBoundingClientRect();
+  view.w = w; view.h = h; view.offX = 0; view.offY = 0;
+  var freeW = w, freeH = h;
+  if (pr.height > h * 0.6) {                       // side panel
+    freeW = Math.max(200, pr.left - ar.left); view.offX = (w - freeW) / 2;
+  } else {                                          // bottom sheet, title on top
+    var top = tr.bottom - ar.top, bottom = pr.top - ar.top;
+    freeH = Math.max(160, bottom - top); view.offY = (h - (top + bottom)) / 2;
+  }
+  view.fx = freeW / h; view.fy = freeH / h;
+  scaleEl.style.bottom = (pr.height > h * 0.6 ? 18 : Math.round(ar.bottom - pr.top + 10)) + 'px';
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.setViewOffset(w, h, view.offX, view.offY, w, h);
+  camera.updateProjectionMatrix();
+}
+
+/* ------------------------------------------------------------ interaction */
+var raycaster = new T.Raycaster(), ndc = new T.Vector2();
+var state = { selected: null, hover: null, xray: false, spin: false, pins: true, explode: 0, angle: 0, speed: 0.5 };
+
+function visiblePick(m) { return !(state.xray && P[m.userData.part].shell); }
+function pickAt(clientX, clientY) {
+  var r = canvas.getBoundingClientRect();
+  ndc.set((clientX - r.left) / r.width * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  var hits = raycaster.intersectObjects(pickables, false);
+  for (var i = 0; i < hits.length; i++) if (visiblePick(hits[i].object)) return hits[i];
+  return null;
+}
+function paint() {
+  ORDER.forEach(function (id) {
+    var p = P[id], hex = id === state.selected ? 0x0a4a48 : (id === state.hover ? 0x052a29 : 0x000000);
+    var ghost = state.xray && p.shell;
+    p.meshes.forEach(function (m) {
+      m.material.emissive.setHex(hex);
+      m.material.transparent = ghost; m.material.opacity = ghost ? 0.13 : 1; m.material.depthWrite = !ghost; m.castShadow = !ghost;
+      m.renderOrder = ghost ? 2 : 0;
+    });
+  });
+}
+function setXray(on) {
+  state.xray = on; document.getElementById('btn-xray').setAttribute('aria-pressed', String(on));
+  paint(); syncPins();
+}
+function setSpin(on) { state.spin = on; document.getElementById('btn-spin').setAttribute('aria-pressed', String(on)); }
+
+var detail = document.getElementById('detail'), list = document.getElementById('parts');
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function renderDetail() {
+  var id = state.selected;
+  if (!id) {
+    detail.innerHTML = '<p class="kicker">Explore</p><h2>Pick a part</h2>' +
+      '<p class="lead">Click any part of the reel or choose one below and the camera flies in. Slide Explode to pull all ' + ORDER.length + ' parts apart like a parts diagram.</p>' +
+      '<p>Scroll or pinch to zoom toward the pointer. Drag to orbit. Right-drag or two-finger drag to pan. Drag the handle or its knob to wind the reel by hand.</p>';
+  } else {
+    var d = INFO[id];
+    detail.innerHTML = '<p class="kicker">No. ' + (ORDER.indexOf(id) + 1) + ' &middot; ' + esc(GROUPS[d.group].label) + '</p><h2>' + esc(d.name) + '</h2><p class="lead">' + esc(d.text) + '</p>' +
+      '<dl class="facts">' + d.facts.map(function (f) { return '<dt>' + esc(f[0]) + '</dt><dd>' + esc(f[1]) + '</dd>'; }).join('') + '</dl>';
+  }
+  detail.scrollTop = 0;
+  Array.prototype.forEach.call(list.querySelectorAll('.part'), function (b) {
+    var on = b.dataset.id === id; b.setAttribute('aria-current', String(on));
+    if (on && b.scrollIntoView && window.innerWidth <= 760) b.scrollIntoView({ block: 'nearest', inline: 'center' });
+  });
+}
+function select(id) {
+  state.selected = id;
+  if (id) {
+    if (INFO[id].internal && !state.xray && state.explode < 0.35) setXray(true);
+    if (INFO[id].group === 'rotor' || INFO[id].group === 'handle') setSpin(false);
+    flyTo(id);
+  }
+  paint(); renderDetail(); syncPins(); resizeSoon();
+}
+
+// Parts list and pins
+var pinsEl = document.getElementById('pins'), pinEls = {};
+(function buildLists() {
+  var html = '';
+  var lastGroup = null;
+  ORDER.forEach(function (id, i) {
+    if (INFO[id].group !== lastGroup) { lastGroup = INFO[id].group; html += '<li class="group">' + esc(GROUPS[lastGroup].label) + '</li>'; }
+    html += '<li><button class="part" type="button" data-id="' + id + '" aria-current="false"><span class="n">' + (i + 1) + '</span><span class="name">' + esc(INFO[id].name) + '</span></button></li>';
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'pin'; b.textContent = String(i + 1); b.dataset.id = id;
+    b.setAttribute('aria-label', INFO[id].name); b.title = INFO[id].name; b.tabIndex = -1;
+    pinsEl.appendChild(b); pinEls[id] = b;
+  });
+  list.innerHTML = html;
+})();
+list.addEventListener('click', function (e) { var b = e.target.closest('.part'); if (b) select(b.dataset.id); });
+pinsEl.addEventListener('click', function (e) { var b = e.target.closest('.pin'); if (b) select(b.dataset.id); });
+function syncPins() {
+  ORDER.forEach(function (id) {
+    pinEls[id].hidden = !state.pins || (P[id].internal && !state.xray && state.explode < 0.35);
+    pinEls[id].classList.toggle('is-selected', id === state.selected);
+  });
+}
+var occIndex = 0, occRay = new T.Raycaster();
+function updatePins() {
+  if (!state.pins) return;
+  ORDER.forEach(function (id) {
+    var el = pinEls[id]; if (el.hidden) return;
+    P[id].anchor.getWorldPosition(v3); v3.project(camera);
+    if (v3.z > 1 || v3.z < -1) { el.style.transform = 'translate(-999px,-999px)'; return; }
+    el.style.transform = 'translate(' + ((v3.x * 0.5 + 0.5) * view.w).toFixed(1) + 'px,' + ((-v3.y * 0.5 + 0.5) * view.h).toFixed(1) + 'px)';
+  });
+  // one occlusion test per frame, round robin
+  for (var n = 0; n < 6; n++) occlude(ORDER[occIndex++ % ORDER.length]);
+}
+function occlude(id) {
+  var el = pinEls[id];
+  if (el.hidden) return;
+  P[id].anchor.getWorldPosition(v3);
+  var dist = v3.distanceTo(camera.position);
+  occRay.set(camera.position, v3.sub(camera.position).normalize());
+  var hits = occRay.intersectObjects(pickables, false), hidden = false;
+  for (var i = 0; i < hits.length; i++) {
+    if (!visiblePick(hits[i].object)) continue;
+    hidden = hits[i].distance < dist - 0.12 && hits[i].object.userData.part !== id;
+    break;
+  }
+  el.classList.toggle('is-occluded', hidden);
+}
+
+// Pointer orbit / pan / pinch, click to select
+var pointers = new Map(), drag = null, tip = document.getElementById('tip');
+var CRANK_PARTS = { handle: 1, knob: 1, knobCap: 1 }, crank = null, hub = new T.Vector3(), probe = new T.Vector3();
+function screenOf(v) { v.project(camera); return [(v.x * 0.5 + 0.5) * view.w, (-v.y * 0.5 + 0.5) * view.h]; }
+function crankStart(e) {
+  var r = canvas.getBoundingClientRect();
+  handleSpin.getWorldPosition(hub);
+  var c = screenOf(hub.clone());
+  // which way does the knob move on screen when the handle winds forward?
+  var p0 = screenOf(handleSpin.localToWorld(probe.set(0, -ARM, 2.5)).clone());
+  handleSpin.rotation.z -= 0.05; handleSpin.updateMatrixWorld(true);
+  var p1 = screenOf(handleSpin.localToWorld(probe.set(0, -ARM, 2.5)).clone());
+  handleSpin.rotation.z += 0.05; handleSpin.updateMatrixWorld(true);
+  var d = Math.atan2(p1[1] - c[1], p1[0] - c[0]) - Math.atan2(p0[1] - c[1], p0[0] - c[0]);
+  crank = { cx: c[0] + r.left, cy: c[1] + r.top, sign: Math.sin(d) >= 0 ? 1 : -1, last: Math.atan2(e.clientY - (c[1] + r.top), e.clientX - (c[0] + r.left)) };
+}
+function crankMove(e) {
+  var a = Math.atan2(e.clientY - crank.cy, e.clientX - crank.cx), d = a - crank.last;
+  if (d > Math.PI) d -= Math.PI * 2; else if (d < -Math.PI) d += Math.PI * 2;
+  crank.last = a; state.angle += d * crank.sign; pose();
+}
+function pan(dx, dy) {
+  var k = 2 * cur.r * Math.tan(camera.fov * Math.PI / 360) / view.h;
+  var e = camera.matrixWorld.elements;
+  goal.target.x += (-dx * e[0] + dy * e[4]) * k; goal.target.y += (-dx * e[1] + dy * e[5]) * k; goal.target.z += (-dx * e[2] + dy * e[6]) * k;
+}
+function zoom(factor, clientX, clientY) {
+  var nr = Math.max(R_MIN, Math.min(R_MAX, goal.r * factor)), f = nr / goal.r;
+  if (f < 1) { var hit = pickAt(clientX, clientY); if (hit) goal.target.lerp(hit.point, 1 - f); }
+  else if (f > 1) goal.target.lerp(home.target, Math.min(1, (f - 1) * 0.6));
+  goal.r = nr;
+}
+canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+canvas.addEventListener('pointerdown', function (e) {
+  canvas.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  drag = { x0: e.clientX, y0: e.clientY, moved: 0, pan: e.button === 2 || e.button === 1 || e.shiftKey, t: performance.now(), multi: pointers.size > 1 };
+  canvas.classList.add('is-dragging'); tip.hidden = true;
+  crank = null;
+  if (pointers.size === 1 && !drag.pan && state.explode < 0.05) {
+    var grabbed = pickAt(e.clientX, e.clientY);
+    if (grabbed && CRANK_PARTS[grabbed.object.userData.part]) { crankStart(e); canvas.classList.add('is-cranking'); }
+  }
+});
+canvas.addEventListener('pointermove', function (e) {
+  var p = pointers.get(e.pointerId);
+  if (!p) { hover(e); return; }
+  var dx = e.clientX - p.x, dy = e.clientY - p.y;
+  if (pointers.size === 2) {
+    var other; pointers.forEach(function (q, id) { if (id !== e.pointerId) other = q; });
+    var d0 = Math.hypot(p.x - other.x, p.y - other.y), d1 = Math.hypot(e.clientX - other.x, e.clientY - other.y);
+    if (d0 > 0 && d1 > 0) zoom(d0 / d1, (e.clientX + other.x) / 2, (e.clientY + other.y) / 2);
+    pan(dx / 2, dy / 2);
+    if (drag) drag.multi = true;
+  } else if (crank) {
+    crankMove(e);
+  } else if (drag && drag.pan) {
+    pan(dx, dy);
+  } else {
+    goal.theta -= dx * 0.0085;
+    goal.phi = Math.max(0.08, Math.min(Math.PI - 0.08, goal.phi - dy * 0.0085));
+  }
+  if (drag) drag.moved += Math.abs(dx) + Math.abs(dy);
+  p.x = e.clientX; p.y = e.clientY;
+});
+function release(e) {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.delete(e.pointerId);
+  if (pointers.size === 0) {
+    canvas.classList.remove('is-dragging'); canvas.classList.remove('is-cranking'); crank = null;
+    if (drag && !drag.multi && drag.moved < 7 && performance.now() - drag.t < 600 && e.type === 'pointerup') {
+      var hit = pickAt(e.clientX, e.clientY);
+      if (hit) select(hit.object.userData.part);
+    }
+    drag = null;
+  }
+}
+canvas.addEventListener('pointerup', release);
+canvas.addEventListener('pointercancel', release);
+canvas.addEventListener('pointerleave', function () { if (state.hover) { state.hover = null; paint(); } tip.hidden = true; canvas.classList.remove('is-over'); canvas.classList.remove('is-crank'); });
+canvas.addEventListener('wheel', function (e) {
+  e.preventDefault();
+  var dy = e.deltaY * (e.deltaMode === 1 ? 32 : 1);
+  zoom(Math.exp(Math.max(-240, Math.min(240, dy)) * 0.0016), e.clientX, e.clientY);
+}, { passive: false });
+canvas.addEventListener('dblclick', function (e) { if (!pickAt(e.clientX, e.clientY)) { select(null); goHome(); } });
+var hoverAt = 0;
+function hover(e) {
+  if (e.pointerType !== 'mouse') return;
+  var now = performance.now(); if (now - hoverAt < 40) return; hoverAt = now;
+  var hit = pickAt(e.clientX, e.clientY), id = hit ? hit.object.userData.part : null;
+  var windable = !!(id && CRANK_PARTS[id] && state.explode < 0.05);
+  if (id !== state.hover) { state.hover = id; paint(); canvas.classList.toggle('is-over', !!id && !windable); canvas.classList.toggle('is-crank', windable); }
+  if (id) {
+    var r = app.getBoundingClientRect();
+    tip.textContent = INFO[id].name + (windable ? ' · drag to wind' : ''); tip.hidden = false;
+    tip.style.transform = 'translate(' + (e.clientX - r.left + 14) + 'px,' + (e.clientY - r.top + 16) + 'px)';
+  } else tip.hidden = true;
+}
+
+// Controls
+document.getElementById('btn-home').addEventListener('click', function () { select(null); goHome(); });
+document.getElementById('btn-spin').addEventListener('click', function () { setSpin(!state.spin); });
+document.getElementById('btn-xray').addEventListener('click', function () { setXray(!state.xray); });
+(function () {
+  var input = document.getElementById('speed'), out = document.getElementById('speed-out');
+  function sync() {      // 80 cm of line per handle turn
+    state.speed = input.value / 100;
+    out.textContent = state.speed.toFixed(2) + ' turns/s · ' + Math.round(state.speed * 80) + ' cm/s';
+  }
+  input.addEventListener('input', sync); sync();
+})();
+document.getElementById('btn-pins').addEventListener('click', function (e) {
+  state.pins = !state.pins; e.currentTarget.setAttribute('aria-pressed', String(state.pins)); syncPins();
+});
+document.getElementById('explode').addEventListener('input', function (e) {
+  state.explode = e.target.value / 100; applyExplode(); syncPins();
+  if (!state.selected) {      // swing round to a three-quarter view as the parts spread out
+    computeHome(); goal.target.copy(home.target); goal.r = home.r;
+    goal.theta = nearestAngle(home.theta - 0.74 * state.explode, cur.theta); goal.phi = home.phi - 0.38 * state.explode;
+  }
+});
+function applyExplode() {
+  var t = state.explode; t = t * t * (3 - 2 * t);
+  ORDER.forEach(function (id) { var p = P[id]; p.g.position.copy(p.base).addScaledVector(p.ex, t); });
+  axes.children.forEach(function (l) { l.material.opacity = t * 0.55; });
+  root.updateMatrixWorld(true);
+}
+function pose() {
+  var a = state.angle;
+  var b = a * 0.55;
+  handleSpin.rotation.z = HANDLE_REST - a;
+  rotorSpin.rotation.x = ROTOR_REST + a * 5.7;
+  // the pin on the oscillation gear drives the slider: forward-most at rest, 2 x STROKE back at half a cycle
+  oscSpin.rotation.z = b + Math.PI / 2; osc.position.x = (Math.cos(b) - 1) * STROKE;
+}
+
+// Scale bar: true size at the distance of the point the camera is looking at
+var scaleEl = document.getElementById('scale'), scaleBar = scaleEl.firstChild, scaleText = scaleEl.lastChild, scaleShown = 0;
+function updateScale() {
+  var pxPerMm = view.h / (2 * cur.r * Math.tan(camera.fov * Math.PI / 360)) / 10;
+  var steps = [1, 2, 5, 10, 20, 50, 100, 200], mm = steps[steps.length - 1];
+  for (var i = 0; i < steps.length; i++) if (steps[i] * pxPerMm >= 56) { mm = steps[i]; break; }
+  var w = Math.round(mm * pxPerMm);
+  if (w === scaleShown) return; scaleShown = w;
+  scaleBar.style.width = w + 'px'; scaleText.textContent = mm + ' mm';
+}
+var resizeQueued = false;
+function resizeSoon() { if (resizeQueued) return; resizeQueued = true; requestAnimationFrame(function () { resizeQueued = false; resize(); }); }
+window.addEventListener('resize', function () { resize(); if (!state.selected) { computeHome(); goal.r = home.r; goal.target.copy(home.target); } });
+
+/* ------------------------------------------------------------------ loop */
+var last = performance.now();
+function frame(now) {
+  var dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (state.spin && !crank) { state.angle += dt * Math.PI * 2 * state.speed; pose(); }
+  var k = reduceMotion ? 1 : 1 - Math.exp(-dt * 7);
+  cur.target.lerp(goal.target, k);
+  cur.r += (goal.r - cur.r) * k; cur.theta += (goal.theta - cur.theta) * k; cur.phi += (goal.phi - cur.phi) * k;
+  applyCamera();
+  renderer.render(scene, camera);
+  updatePins(); updateScale();
+  requestAnimationFrame(frame);
+}
+
+pose(); applyExplode(); renderDetail(); syncPins(); paint();
+resize(); goHome(true); applyCamera();
+requestAnimationFrame(frame);
+window.__reel = { select: select, state: state, setXray: setXray, snap: snap, pose: pose, parts: P, three: T };
+})();
+</script>
+<!--page:body-end-->
+</body>
+</html>
