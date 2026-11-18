@@ -500,9 +500,10 @@ function def(id, parent, o) {
 }
 
 var GX = -1.57, GY = 0.75;   // drive gear / handle axis: 7.5 mm above the spool axis
+var KNOB_Z = 0.8;   // the handle arm angles out so the knob clears the line
 var ARM = 5.5, HANDLE_REST = 0.615, ROTOR_REST = Math.PI / 2, STROKE = 0.69;
 var BODY_R = 2.05, BODY_HALF = 1.15;
-var GUIDE_X = 12.5, GUIDE_Y = 7.4;    // first rod guide (outside the reel, for the line)
+var GUIDE_X = 65, GUIDE_Y = 6.2;      // first (stripping) guide, about 65 cm up the rod from the reel
 
 var osc = new T.Group(); root.add(osc);                 // everything that slides with the main shaft
 var rotorSpin = new T.Group(); root.add(rotorSpin);     // everything that turns with the pinion
@@ -600,13 +601,20 @@ var RX = 3.85, RY = 2.85, WIRE_R = 4.5;   // line roller position on the bail ar
 var BAIL_OPEN = -2.97;     // about 170°: the wire swings forward round the front of the spool to the far side
 var bailPivot = new T.Group(); bailPivot.position.set(RX, 0, 0); rotorSpin.add(bailPivot);
 var bailArm = new T.Group(); bailArm.position.set(-RX, 0, 0); bailPivot.add(bailArm);
-g = def('lever', rotorSpin, { n: 'Bail arm lever', g: 'rotor', ex: [9.3, 2.0, 0], pin: [3.5, 3.3, 0.5],
-  t: 'The hinge bracket on the rotor arm that the bail and line roller swing on. Flipping the bail open releases the line for a cast.' });
-mesh(g, extrude(splineShape([[2.95, 2.95], [3.3, 3.3], [3.9, 3.34], [4.28, 3.05], [4.25, 2.62], [3.85, 2.5], [3.3, 2.62]]), 0.26, 0.09, 60), MAT.silver(), [0, 0, 0.56]);
+g = def('lever', bailArm, { n: 'Bail arm lever', g: 'rotor', ex: [9.3, 2.4, 0], pin: [4.2, 3.52, -0.15],
+  t: 'The bail arm over the line roller. It swings on its hinge screw with the bail wire when you open the bail, and carries the roller with it.' });
+(function () {
+  // plate drawn in the x–z plane around the hinge line, then laid flat above the rotor arm
+  var plate = extrude(splineShape([[3.42, 0.22], [3.62, 0.44], [4.05, 0.46], [4.5, 0.22], [4.62, -0.25], [4.32, -0.62], [3.85, -0.66], [3.45, -0.36]]), 0.12, 0.05, 60);
+  plate.rotateX(Math.PI / 2); plate.translate(0, 3.42, 0);
+  mesh(g, plate, MAT.silver());
+  mesh(g, new T.CylinderGeometry(0.13, 0.15, 0.36, 32), MAT.silver(), [RX, 3.2, 0]);   // post down to the roller
+})();
 
-g = def('leverScrew', rotorSpin, { n: 'Lever screw', g: 'rotor', ex: [9.3, 2.0, 1.0], pin: [3.3, 3.0, 0.86],
-  t: 'The pivot screw for the bail arm lever.' });
-screwZ(g, [3.3, 2.98, 0.78], 1);
+g = def('leverScrew', rotorSpin, { n: 'Lever screw', g: 'rotor', ex: [9.3, 3.4, 0], pin: [RX, 3.56, 0],
+  t: 'The hinge screw for the bail arm. The bail swings about the line through this screw and the holder screw.' });
+mesh(g, new T.CylinderGeometry(0.13, 0.13, 0.07, 32), MAT.black(), [RX, 3.53, 0]);
+mesh(g, new T.CylinderGeometry(0.06, 0.06, 0.4, 16), MAT.steel(), [RX, 3.3, 0]);
 
 g = def('collarA', bailArm, { n: 'Roller collar', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -0.55], pin: [0, 0.24, 0.3],
   t: 'A spacer that centres the line roller and its bearing on the lever.' });
@@ -637,13 +645,14 @@ g = def('wire', bailArm, { n: 'Bail wire', g: 'rotor', ex: [10.6, 0, -3.6], pin:
   mesh(g, latheZ(curve([[-0.29, 0.26], [-0.36, 0.25], [-0.5, 0.12], [-0.54, 0]], 20), 48), MAT.silver(), [RX, RY, 0]);
 })();
 
-g = def('holder', rotorSpin, { n: 'Bail holder', g: 'rotor', ex: [9.3, -2.0, 0], pin: [3.6, -3.1, 0.2],
-  t: 'The hinge at the far end of the bail wire, on the opposite rotor arm.' });
-mesh(g, new T.SphereGeometry(0.3, 48, 32), MAT.silver(), [RX - 0.1, -RY, 0]).scale.set(1.35, 0.95, 1.15);
+g = def('holder', bailArm, { n: 'Bail holder', g: 'rotor', ex: [9.3, -2.0, 0], pin: [RX + 0.3, -3.0, 0.2],
+  t: 'Holds the far end of the bail wire on the opposite rotor arm and swings with it on the holder screw.' });
+mesh(g, new T.SphereGeometry(0.3, 48, 32), MAT.silver(), [RX, -RY, 0]).scale.set(1.35, 0.95, 1.15);
 
-g = def('holderScrew', rotorSpin, { n: 'Holder screw', g: 'rotor', ex: [9.3, -2.0, 1.0], pin: [RX - 0.1, -RY, 0.44],
-  t: 'Fixes the bail holder to its rotor arm and acts as its pivot.' });
-screwZ(g, [RX - 0.1, -RY, 0.36], 1);
+g = def('holderScrew', rotorSpin, { n: 'Holder screw', g: 'rotor', ex: [9.3, -3.4, 0], pin: [RX, -3.3, 0],
+  t: 'Fixes the bail holder to its rotor arm. It sits on the same hinge line as the lever screw.' });
+mesh(g, new T.CylinderGeometry(0.13, 0.13, 0.07, 32), MAT.black(), [RX, -3.25, 0]);
+mesh(g, new T.CylinderGeometry(0.06, 0.06, 0.36, 16), MAT.steel(), [RX, -3.05, 0]);
 
 g = def('spring', rotorSpin, { n: 'Bail spring', g: 'rotor', ex: [9.3, 1.2, 1.8], pin: [2.2, 2.9, 0],
   t: 'Sits inside the rotor arm and snaps the bail fully open or fully shut, so it never rests halfway.' });
@@ -680,14 +689,14 @@ g = def('body', root, { n: 'Body, stem and foot', g: 'body', shell: true, ex: [0
 // Ghost of the rod, for context only
 (function () {
   var ghost = new T.MeshStandardMaterial({ color: 0x8c949c, transparent: true, opacity: 0.14, roughness: 0.6, depthWrite: false });
-  var m = new T.Mesh(cylX(0.5, -5.5, 14, 48), ghost);
+  var m = new T.Mesh(cylX(0.5, -5.5, 75, 48), ghost);
   m.position.set(0, 8.8, 0); root.add(m); m.userData.ghost = true;
   // first rod guide, where the line comes from
   var gm = new T.MeshStandardMaterial({ color: 0x8c949c, metalness: 0.6, roughness: 0.4, transparent: true, opacity: 0.45, depthWrite: false });
-  var ringG = new T.TorusGeometry(0.5, 0.06, 12, 48); ringG.rotateY(Math.PI / 2);
+  var ringG = new T.TorusGeometry(1.0, 0.08, 12, 64); ringG.rotateY(Math.PI / 2);
   var gr = new T.Mesh(ringG, gm); gr.position.set(GUIDE_X, GUIDE_Y, 0); root.add(gr); gr.userData.ghost = true;
   [-1, 1].forEach(function (k) {
-    var leg = new T.Mesh(rodBetween([GUIDE_X, GUIDE_Y + 0.5, k * 0.1], [GUIDE_X - 0.6 * k, 8.4, k * 0.35], 0.04, 0.04), gm);
+    var leg = new T.Mesh(rodBetween([GUIDE_X, GUIDE_Y + 1.0, k * 0.15], [GUIDE_X - 1.4 * k, 8.4, k * 0.4], 0.05, 0.05), gm);
     root.add(leg); leg.userData.ghost = true;
   });
 })();
@@ -808,29 +817,29 @@ g = def('handle', handleSpin, { n: 'Handle', g: 'handle', ex: [0, 0, 7.4], pin: 
   f: [['Length', '55 mm'], ['Gear ratio', '5.7 : 1'], ['Side', 'Swappable left / right']] });
 (function () {
   mesh(g, latheZ(curve([[1.64, 0.4], [1.72, 0.56], [1.9, 0.6], [2.06, 0.52], [2.16, 0.32], [2.18, 0]], 40), 96), MAT.silver());
-  mesh(g, rodBetween([0, 0, 1.92], [0, -ARM, 2.5], 0.3, 0.2), MAT.silver());
-  mesh(g, new T.SphereGeometry(0.2, 32, 24), MAT.silver(), [0, -ARM, 2.5]);
-  mesh(g, cylZ(0.11, 2.5, 3.95, 24), MAT.steel(), [0, -ARM, 0]);
-  mesh(g, ring('z', 2.6, 0.11, 0.26, 0.12, 32), MAT.silver(), [0, -ARM, 0]);
+  mesh(g, rodBetween([0, 0, 1.92], [0, -ARM, KNOB_Z + 2.5], 0.3, 0.2), MAT.silver());
+  mesh(g, new T.SphereGeometry(0.2, 32, 24), MAT.silver(), [0, -ARM, KNOB_Z + 2.5]);
+  mesh(g, cylZ(0.11, 2.5, 3.95, 24), MAT.steel(), [0, -ARM, KNOB_Z]);
+  mesh(g, ring('z', 2.6, 0.11, 0.26, 0.12, 32), MAT.silver(), [0, -ARM, KNOB_Z]);
 })();
 
-g = def('knobBearingA', handleSpin, { n: 'Knob bearing, inner', g: 'handle', inside: true, at: [0, -ARM, 2.95], ex: [0, 0, 9.2], pin: [0, 0.3, 0],
+g = def('knobBearingA', handleSpin, { n: 'Knob bearing, inner', g: 'handle', inside: true, at: [0, -ARM, KNOB_Z + 2.95], ex: [0, 0, 9.2], pin: [0, 0.3, 0],
   t: 'One of two ball bearings the knob spins on.' });
 bearing(g, 'z', 0.3, 0.16);
 
-g = def('knob', handleSpin, { n: 'Handle knob', g: 'handle', shell: true, at: [0, -ARM, 0], ex: [0, 0, 10.2], pin: [0, 1.15, 3.85],
+g = def('knob', handleSpin, { n: 'Handle knob', g: 'handle', shell: true, at: [0, -ARM, KNOB_Z], ex: [0, 0, 10.2], pin: [0, 1.15, 3.85],
   t: 'A round, flat knob that is easy to find without looking and comfortable to pinch through a long session of jerks and fast slack recovery.' });
 mesh(g, latheZ(curve([[2.76, 0.34], [2.78, 0.9], [2.9, 1.22], [3.15, 1.35], [3.55, 1.35], [3.8, 1.22], [3.93, 0.95], [3.95, 0.78]], 60), 128), MAT.rubber());
 
-g = def('knobBearingB', handleSpin, { n: 'Knob bearing, outer', g: 'handle', inside: true, at: [0, -ARM, 3.7], ex: [0, 0, 11.2], pin: [0, 0.3, 0],
+g = def('knobBearingB', handleSpin, { n: 'Knob bearing, outer', g: 'handle', inside: true, at: [0, -ARM, KNOB_Z + 3.7], ex: [0, 0, 11.2], pin: [0, 0.3, 0],
   t: 'The second knob bearing, under the cap.' });
 bearing(g, 'z', 0.3, 0.16);
 
-g = def('knobScrew', handleSpin, { n: 'Knob screw', g: 'handle', inside: true, ex: [0, 0, 11.8], pin: [0.13, -ARM, 3.95],
+g = def('knobScrew', handleSpin, { n: 'Knob screw', g: 'handle', inside: true, at: [0, 0, KNOB_Z], ex: [0, 0, 11.8], pin: [0.13, -ARM, 3.95],
   t: 'Holds the knob on its axle. It sits under the knob cap.' });
 screwZ(g, [0, -ARM, 3.88], 1);
 
-g = def('knobCap', handleSpin, { n: 'Knob cap', g: 'handle', at: [0, -ARM, 0], ex: [0, 0, 12.5], pin: [0.4, 0.4, 4.05],
+g = def('knobCap', handleSpin, { n: 'Knob cap', g: 'handle', at: [0, -ARM, KNOB_Z], ex: [0, 0, 12.5], pin: [0.4, 0.4, 4.05],
   t: 'A metal cap that closes the knob. The two holes take a pin tool for removing it.' });
 mesh(g, latheZ(curve([[3.93, 0.8], [3.99, 0.78], [4.04, 0.6], [4.06, 0.3], [4.06, 0]], 30), 96), MAT.silver());
 mesh(g, cylZ(0.07, 4.0, 4.062, 20), MAT.black(), [0.32, 0, 0]); mesh(g, cylZ(0.07, 4.0, 4.062, 20), MAT.black(), [-0.32, 0, 0]);
@@ -881,7 +890,7 @@ var segGeo = new T.CylinderGeometry(1, 1, 1, 10, 1, true), pieces = [];
 for (i = 0; i < 4; i++) { var pc = new T.Mesh(segGeo, new T.MeshStandardMaterial({ roughness: 0.55 })); lineGroup.add(pc); pieces.push(pc); }
 var tagMat = new T.MeshStandardMaterial({ color: 0xffffff, emissive: 0x555555, roughness: 0.4 });
 var tagEdge = new T.MeshBasicMaterial({ color: 0x14171b, side: T.BackSide });
-var TAGS = 7, tagGeo = new T.ConeGeometry(0.09, 0.28, 18), tags = [];
+var TAGS = 7, TAG_SPAN = 15, tagGeo = new T.ConeGeometry(0.09, 0.28, 18), tags = [];
 for (i = 0; i < TAGS; i++) {
   var tg = new T.Mesh(tagGeo, tagMat); tg.castShadow = true;
   var edge = new T.Mesh(tagGeo, tagEdge); edge.scale.set(1.35, 1.2, 1.35); tg.add(edge);   // dark outline so the tag reads on any colour
@@ -1203,9 +1212,9 @@ function crankStart(e) {
   handleSpin.getWorldPosition(hub);
   var c = screenOf(hub.clone());
   // which way does the knob move on screen when the handle winds forward?
-  var p0 = screenOf(handleSpin.localToWorld(probe.set(0, -ARM, 2.5)).clone());
+  var p0 = screenOf(handleSpin.localToWorld(probe.set(0, -ARM, KNOB_Z + 2.5)).clone());
   handleSpin.rotation.z -= 0.05; handleSpin.updateMatrixWorld(true);
-  var p1 = screenOf(handleSpin.localToWorld(probe.set(0, -ARM, 2.5)).clone());
+  var p1 = screenOf(handleSpin.localToWorld(probe.set(0, -ARM, KNOB_Z + 2.5)).clone());
   handleSpin.rotation.z += 0.05; handleSpin.updateMatrixWorld(true);
   var d = Math.atan2(p1[1] - c[1], p1[0] - c[0]) - Math.atan2(p0[1] - c[1], p0[0] - c[0]);
   crank = { cx: c[0] + r.left, cy: c[1] + r.top, sign: Math.sin(d) >= 0 ? 1 : -1, last: Math.atan2(e.clientY - (c[1] + r.top), e.clientX - (c[0] + r.left)) };
@@ -1233,7 +1242,7 @@ function advance(da) {
   if (state.bailTarget) setBail(false);
   var before = LINE.m;
   LINE.m = Math.min(LINE.cap, LINE.m + da / (Math.PI * 2) * 0.8);
-  LINE.phase += Math.min(0.3, (LINE.m - before) * 100 * 0.12 / 1.2);
+  LINE.phase += Math.min(0.3, (LINE.m - before) * 100 * 0.12 / (TAG_SPAN / TAGS));
   pose();
 }
 function pan(dx, dy) {
@@ -1417,11 +1426,11 @@ function updateLine() {
     pRoll.set(5.6 + ox, 2.28, 0); pTouch.set(5.2 + ox, rp, 0);
   }
   drawLine([pTouch, pRoll, GUIDE]);
-  vd.subVectors(pRoll, GUIDE); var len = vd.length(); vd.normalize();
+  vd.subVectors(pRoll, GUIDE); var len = Math.min(TAG_SPAN, vd.length()); vd.normalize();
   for (var k = 0; k < TAGS; k++) {
     var tg = tags[k], f = ((k + LINE.phase) % TAGS + TAGS) % TAGS / TAGS;
     tg.visible = !open;
-    tg.position.copy(GUIDE).addScaledVector(vd, f * len);
+    tg.position.copy(pRoll).addScaledVector(vd, -(1 - f) * len);
     tg.quaternion.setFromUnitVectors(yAxis, vd);
     var sc = Math.max(0.001, Math.min(1, f * TAGS * 0.8, (1 - f) * TAGS * 0.8));
     tg.scale.setScalar(sc);
