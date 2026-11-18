@@ -583,7 +583,7 @@ mesh(g, latheX([[0.05, 1.25], [0.05, 2.44], [0.08, 2.5], [0.14, 2.5], [0.17, 2.4
 mesh(g, torusX(2.5, 0.03, 0.11), MAT.teal());
 (function () {
   // One arm, drawn in the plane through the axis: [x, radius]. The inner edge clears the spool skirt.
-  var arm = splineShape([[0.1, 2.2], [0.24, 2.86], [1.3, 3.14], [2.5, 3.12], [3.3, 3.04], [3.6, 2.86], [3.56, 2.62], [3.0, 2.56], [1.9, 2.56], [1.0, 2.55], [0.5, 2.52], [0.22, 2.44]]);
+  var arm = splineShape([[0.1, 2.2], [0.24, 2.86], [1.3, 3.14], [2.4, 3.12], [3.0, 3.06], [3.28, 2.9], [3.26, 2.64], [2.8, 2.56], [1.9, 2.56], [1.0, 2.55], [0.5, 2.52], [0.22, 2.44]]);
   var win = new T.CatmullRomCurve3([[1.45, 2.74], [1.55, 2.94], [2.4, 2.95], [3.0, 2.88], [3.05, 2.74], [2.4, 2.72]].map(function (p) { return new T.Vector3(p[0], p[1], 0); }), true, 'centripetal').getPoints(60);
   var hole = new T.Path(); win.forEach(function (v, k) { if (k) hole.lineTo(v.x, v.y); else hole.moveTo(v.x, v.y); }); hole.closePath();
   arm.holes.push(hole);
@@ -598,6 +598,9 @@ mesh(g, torusX(1.35, 0.06, 0.1), MAT.rubber());
 
 var RX = 3.85, RY = 2.85, WIRE_R = 4.5;   // line roller position on the bail arm, bail wire reach
 // The bail swings open about the line through its two hinge points (roller end and holder end)
+// Like a real line roller, ours is tilted on the bail arm so the line from the rod guide and the
+// line going on to the spool both run round its groove in the same plane.
+var ROLLER_TILT = 0.78, GROOVE = 0.19 + 0.035;
 var BAIL_OPEN = -2.97;     // about 170°: the wire swings forward round the front of the spool to the far side
 var bailPivot = new T.Group(); bailPivot.position.set(RX, 0, 0); rotorSpin.add(bailPivot);
 var bailArm = new T.Group(); bailArm.position.set(-RX, 0, 0); bailPivot.add(bailArm);
@@ -608,7 +611,6 @@ g = def('lever', bailArm, { n: 'Bail arm lever', g: 'rotor', ex: [9.3, 2.4, 0], 
   var plate = extrude(splineShape([[3.42, 0.22], [3.62, 0.44], [4.05, 0.46], [4.5, 0.22], [4.62, -0.25], [4.32, -0.62], [3.85, -0.66], [3.45, -0.36]]), 0.12, 0.05, 60);
   plate.rotateX(Math.PI / 2); plate.translate(0, 3.42, 0);
   mesh(g, plate, MAT.silver());
-  mesh(g, new T.CylinderGeometry(0.13, 0.15, 0.36, 32), MAT.silver(), [RX, 3.2, 0]);   // post down to the roller
 })();
 
 g = def('leverScrew', rotorSpin, { n: 'Lever screw', g: 'rotor', ex: [9.3, 3.4, 0], pin: [RX, 3.56, 0],
@@ -619,18 +621,22 @@ mesh(g, new T.CylinderGeometry(0.06, 0.06, 0.4, 16), MAT.steel(), [RX, 3.3, 0]);
 g = def('collarA', bailArm, { n: 'Roller collar', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -0.55], pin: [0, 0.24, 0.3],
   t: 'A spacer that centres the line roller and its bearing on the lever.' });
 mesh(g, ring('z', 0.27, 0.08, 0.24, 0.07, 32), MAT.black());
+g.rotation.x = ROLLER_TILT;
 
 g = def('rollerBearing', bailArm, { n: 'Line roller bearing', g: 'rotor', inside: true, at: [RX, RY, 0.02], ex: [9.3, 2.0, -1.1], pin: [0, 0.17, 0],
   t: 'A tiny ball bearing inside the line roller. It lets the roller turn under load so the braid is not dragged across a fixed surface.' });
 bearing(g, 'z', 0.17, 0.2);
+g.rotation.x = ROLLER_TILT;
 
-g = def('roller', bailArm, { n: 'Line roller', g: 'rotor', shell: true, at: [RX, RY, 0], ex: [9.3, 2.0, -1.75], pin: [0, 0.3, 0],
-  t: 'The only place the line touches the reel under load. Its waisted shape keeps the braid centred and feeds it onto the spool without twist. Rinse it after salt water.' });
+g = def('roller', bailArm, { n: 'Line roller', g: 'rotor', shell: true, at: [RX, RY, 0], ex: [9.3, 2.0, -1.75], pin: [0, 0.3, 0], v: [1.4, 0.85],
+  t: 'The only place the line touches the reel under load. The line runs over its waisted groove, and the roller is set at an angle so the line from the rod and the line going on to the spool stay in the groove. Rinse it after salt water.' });
 mesh(g, latheZ(curve([[-0.22, 0.3], [-0.16, 0.22], [0.0, 0.19], [0.18, 0.21], [0.27, 0.3]], 30), 64), MAT.silver());
+g.rotation.x = ROLLER_TILT;
 
 g = def('collarB', bailArm, { n: 'Roller collar', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -2.4], pin: [0, 0.24, -0.26],
   t: 'The outer spacer, between the line roller and the end of the bail wire.' });
 mesh(g, ring('z', -0.29, 0.08, 0.24, 0.07, 32), MAT.black());
+g.rotation.x = ROLLER_TILT;
 
 g = def('wire', bailArm, { n: 'Bail wire', g: 'rotor', ex: [10.6, 0, -3.6], pin: [3.7, 0, -WIRE_R],
   t: 'Catches the line when you close the bail and guides it down to the roller. Thin and light so the rotor stays balanced.',
@@ -639,10 +645,11 @@ g = def('wire', bailArm, { n: 'Bail wire', g: 'rotor', ex: [10.6, 0, -3.6], pin:
   var pts = [];
   for (var k = 0; k <= 40; k++) {
     var t = k / 40 * Math.PI;
-    pts.push(new T.Vector3(RX - Math.sin(t) * 0.15, Math.cos(t) * RY, -0.45 * (1 - k / 40) - Math.sin(t) * WIRE_R));
+    var blend = Math.pow(1 - k / 40, 3);   // start at the tip of the tilted wire cone on the roller
+    pts.push(new T.Vector3(RX - Math.sin(t) * 0.15, Math.cos(t) * RY + 0.38 * blend, -0.38 * blend - Math.sin(t) * WIRE_R));
   }
   mesh(g, new T.TubeGeometry(new T.CatmullRomCurve3(pts), 200, 0.07, 16), MAT.silver());
-  mesh(g, latheZ(curve([[-0.29, 0.26], [-0.36, 0.25], [-0.5, 0.12], [-0.54, 0]], 20), 48), MAT.silver(), [RX, RY, 0]);
+  mesh(g, latheZ(curve([[-0.29, 0.26], [-0.36, 0.25], [-0.5, 0.12], [-0.54, 0]], 20), 48), MAT.silver(), [RX, RY, 0], [ROLLER_TILT, 0, 0]);
 })();
 
 g = def('holder', bailArm, { n: 'Bail holder', g: 'rotor', ex: [9.3, -2.0, 0], pin: [RX + 0.3, -3.0, 0.2],
@@ -887,7 +894,7 @@ var BRAID_NAMES = ['yellow', 'blue', 'green', 'purple', 'red'];
 function sectionOf(m) { return ((Math.floor(m / SECTION) % BRAID.length) + BRAID.length) % BRAID.length; }
 var lineGroup = new T.Group(); root.add(lineGroup);
 var segGeo = new T.CylinderGeometry(1, 1, 1, 10, 1, true), pieces = [];
-for (i = 0; i < 4; i++) { var pc = new T.Mesh(segGeo, new T.MeshStandardMaterial({ roughness: 0.55 })); lineGroup.add(pc); pieces.push(pc); }
+for (i = 0; i < 40; i++) { var pc = new T.Mesh(segGeo, new T.MeshStandardMaterial({ roughness: 0.55 })); lineGroup.add(pc); pieces.push(pc); }
 var tagMat = new T.MeshStandardMaterial({ color: 0xffffff, emissive: 0x555555, roughness: 0.4 });
 var tagEdge = new T.MeshBasicMaterial({ color: 0x14171b, side: T.BackSide });
 var TAGS = 7, TAG_SPAN = 15, tagGeo = new T.ConeGeometry(0.09, 0.28, 18), tags = [];
@@ -918,6 +925,7 @@ function placeSeg(m, a, b, r) {
   m.quaternion.setFromUnitVectors(yAxis, vd.multiplyScalar(1 / len));
   m.scale.set(r, len, r);
 }
+var LP = []; for (i = 0; i < 48; i++) LP.push(new T.Vector3());
 var GUIDE = new T.Vector3(GUIDE_X, GUIDE_Y, 0), pRoll = new T.Vector3(), pTouch = new T.Vector3(), pMid = new T.Vector3();
 // Draw the visible line as straight pieces, splitting a piece where the next 5 m colour starts.
 // Distance along the line is counted from the spool, where the line on the reel ends at LINE.m.
@@ -1057,7 +1065,7 @@ function resize() {
 /* ------------------------------------------------------------ interaction */
 var raycaster = new T.Raycaster(), ndc = new T.Vector2();
 var state = { selected: null, hover: null, xray: false, spin: false, pins: true, explode: 0, angle: 0, speed: 0.5,
-              cut: 0, bail: 0, bailTarget: 0, strip: -1 };
+              cut: 0, bail: 0, bailTarget: 0, strip: -1, slack: 0 };
 function isAssembled() { for (var k = 0; k < ORDER.length; k++) if (P[ORDER[k]].out > 0.01) return false; return true; }
 
 function visibleHit(h) {
@@ -1417,15 +1425,37 @@ function updateLine() {
   lineGroup.visible = !state.xray && isAssembled();
   lineEl.hidden = !lineGroup.visible;
   if (!lineGroup.visible) return;
-  var r = rotorSpin.rotation.x, ox = osc.position.x, open = state.bail > 0.5;
+  var r = rotorSpin.rotation.x, ox = osc.position.x, open = state.bail > 0.5, n = 0, k;
+  function pt(x, y, z) { return LP[n++].set(x, y, z); }
   if (!open) {
-    pRoll.set(RX, RY * Math.cos(r), RY * Math.sin(r));
-    var a = r - Math.acos(Math.min(1, rp / RY));          // the line meets the spool where it is tangent
-    pTouch.set(RX, rp * Math.cos(a), rp * Math.sin(a));
-  } else {                                                 // bail open: line peels over the front lip
-    pRoll.set(5.6 + ox, 2.28, 0); pTouch.set(5.2 + ox, rp, 0);
+    // spool: the line leaves the spool where it is tangent to the line already wound on
+    var a = r - Math.acos(Math.min(1, rp / RY));
+    pt(RX, rp * Math.cos(a), rp * Math.sin(a));
+    // roller: work in the plane of the groove (e1 along the spool axis, e2 across it), find where the
+    // line from the spool and the line from the guide touch the groove, and wrap the line between them
+    var c = r + ROLLER_TILT, cy = RY * Math.cos(r), cz = RY * Math.sin(r), cc = Math.cos(c), sc = Math.sin(c);
+    var gx = GUIDE.x - RX, gy = (GUIDE.y - cy) * cc + (GUIDE.z - cz) * sc;
+    var sy = (LP[0].y - cy) * cc + (LP[0].z - cz) * sc;
+    var aIn = Math.atan2(gy, gx) + Math.acos(Math.min(1, GROOVE / Math.hypot(gx, gy)));
+    var aOut = Math.atan2(sy, 0) - Math.acos(Math.min(1, GROOVE / Math.abs(sy)));
+    while (aOut < aIn) aOut += Math.PI * 2;
+    for (k = 0; k <= 10; k++) {
+      var th = aOut + (aIn - aOut) * k / 10, u = GROOVE * Math.sin(th);
+      pt(RX + GROOVE * Math.cos(th), cy + u * cc, cz + u * sc);
+    }
+    pRoll.copy(LP[n - 1]);
+    pt(GUIDE.x, GUIDE.y, GUIDE.z);
+  } else {
+    // bail open: nothing holds the line, so it peels over the front lip and hangs slack to the guide
+    var sag = 7 * state.slack * state.slack * (3 - 2 * state.slack), sway = Math.sin(performance.now() / 900) * 0.25 * state.slack;
+    pt(5.2 + ox, rp, 0); pt(5.6 + ox, 2.28, 0);
+    pRoll.copy(LP[1]);
+    for (k = 1; k <= 30; k++) {
+      var f = k / 30, d = 4 * f * (1 - f);
+      pt(pRoll.x + (GUIDE.x - pRoll.x) * f, pRoll.y + (GUIDE.y - pRoll.y) * f - sag * d, sway * d);
+    }
   }
-  drawLine([pTouch, pRoll, GUIDE]);
+  drawLine(LP.slice(0, n));
   vd.subVectors(pRoll, GUIDE); var len = Math.min(TAG_SPAN, vd.length()); vd.normalize();
   for (var k = 0; k < TAGS; k++) {
     var tg = tags[k], f = ((k + LINE.phase) % TAGS + TAGS) % TAGS / TAGS;
@@ -1468,6 +1498,8 @@ var last = performance.now();
 function frame(now) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (state.spin && !crank && isAssembled()) advance(dt * Math.PI * 2 * state.speed);
+  var slackTo = state.bail > 0.5 ? 1 : 0;
+  if (state.slack !== slackTo) state.slack = reduceMotion ? slackTo : Math.max(0, Math.min(1, state.slack + Math.sign(slackTo - state.slack) * dt / (slackTo ? 0.9 : 0.25)));
   if (state.bail !== state.bailTarget) {
     state.bail = reduceMotion ? state.bailTarget : Math.max(0, Math.min(1, state.bail + Math.sign(state.bailTarget - state.bail) * dt / 0.35));
     var eb = state.bail * state.bail * (3 - 2 * state.bail);
@@ -1492,7 +1524,7 @@ function frame(now) {
 pose(); applyExplode(); renderDetail(); syncPins(); paint();
 resize(); goHome(true); applyCamera();
 requestAnimationFrame(frame);
-window.__reel = { select: select, state: state, setXray: setXray, snap: snap, pose: pose, parts: P, three: T, setStrip: setStrip, setBail: setBail, advance: advance, LINE: LINE, bailPivot: bailPivot, root: root };
+window.__reel = { select: select, state: state, setXray: setXray, snap: snap, pose: pose, parts: P, three: T, setStrip: setStrip, setBail: setBail, advance: advance, LINE: LINE, bailPivot: bailPivot, root: root, updateLine: updateLine, pieces: pieces };
 })();
 </script>
 <!--page:body-end-->
