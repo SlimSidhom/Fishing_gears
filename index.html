@@ -6,45 +6,55 @@
 <!--page:start-->
 <title>Emeraldas Air Reel Viewer</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Saira+Condensed:wght@500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
 <style>
-/* Layout: the reel owns the whole screen; a title block floats top-left and one
-   panel (right column on desktop, bottom sheet on phones) holds detail, parts, view controls. */
+/* Layout: the reel sits on a nautical depth chart that fills the screen; a title block floats
+   top-left and one panel (right column on desktop, bottom sheet on phones) holds detail, parts
+   and view controls. Light is a pale chart table; dark is the night sea, where eging happens. */
 :root {
-  --stage-a: #fafbfc;
-  --stage-b: #c3c8cf;
-  --surface: rgba(251, 252, 253, .9);
-  --surface-solid: #fbfcfd;
-  --ink: #14181d;
-  --muted: #535b66;
-  --line: rgba(20, 24, 29, .15);
+  --sea-a: #f2f6f6;
+  --sea-b: #cddcde;
+  --glow: rgba(255, 255, 255, .85);
+  --chart-line: rgba(14, 100, 108, .15);
+  --chart-text: rgba(14, 100, 108, .5);
+  --surface: rgba(250, 252, 252, .88);
+  --surface-solid: #fafcfc;
+  --ink: #102026;
+  --muted: #4e6168;
+  --line: rgba(16, 32, 38, .14);
   --accent: #087f78;
   --accent-ink: #ffffff;
   --accent-soft: rgba(8, 127, 120, .12);
-  --pin-bg: #14181d;
-  --halo: #f4f5f7;
-  --pin-ink: #fafbfc;
-  --font-display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --egi: #cf4f17;
+  --pin-bg: #102026;
+  --halo: #eef4f4;
+  --pin-ink: #fafcfc;
+  --font-display: "Saira Condensed", "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
   --font-body: "Barlow", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --gutter-l: max(16px, env(safe-area-inset-left, 0px));
   --gutter-r: max(16px, env(safe-area-inset-right, 0px));
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --stage-a: #4a5059; --stage-b: #0c0e11;
-    --surface: rgba(18, 21, 26, .86); --surface-solid: #12151a;
-    --ink: #eceff2; --muted: #a3acb7; --line: rgba(236, 239, 242, .16);
-    --accent: #2ccfc2; --accent-ink: #04211f; --accent-soft: rgba(44, 207, 194, .14);
-    --pin-bg: #eceff2; --pin-ink: #12151a; --halo: #0c0e11;
+    --sea-a: #173640; --sea-b: #050c10; --glow: rgba(140, 200, 205, .16);
+    --chart-line: rgba(80, 205, 198, .11); --chart-text: rgba(120, 215, 206, .42);
+    --surface: rgba(10, 22, 27, .84); --surface-solid: #0b171c;
+    --ink: #e8f1f2; --muted: #9db2b7; --line: rgba(232, 241, 242, .14);
+    --accent: #2fd0c4; --accent-ink: #032321; --accent-soft: rgba(47, 208, 196, .14);
+    --egi: #ff8a4c;
+    --pin-bg: #e8f1f2; --pin-ink: #0b171c; --halo: #07131a;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --stage-a: #4a5059; --stage-b: #0c0e11;
-  --surface: rgba(18, 21, 26, .86); --surface-solid: #12151a;
-  --ink: #eceff2; --muted: #a3acb7; --line: rgba(236, 239, 242, .16);
-  --accent: #2ccfc2; --accent-ink: #04211f; --accent-soft: rgba(44, 207, 194, .14);
-  --pin-bg: #eceff2; --pin-ink: #12151a; --halo: #0c0e11;
+  --sea-a: #173640; --sea-b: #050c10; --glow: rgba(140, 200, 205, .16);
+  --chart-line: rgba(80, 205, 198, .11); --chart-text: rgba(120, 215, 206, .42);
+  --surface: rgba(10, 22, 27, .84); --surface-solid: #0b171c;
+  --ink: #e8f1f2; --muted: #9db2b7; --line: rgba(232, 241, 242, .14);
+  --accent: #2fd0c4; --accent-ink: #032321; --accent-soft: rgba(47, 208, 196, .14);
+  --egi: #ff8a4c;
+  --pin-bg: #e8f1f2; --pin-ink: #0b171c; --halo: #07131a;
   color-scheme: dark;
 }
 
@@ -53,7 +63,7 @@ html, body { height: 100%; }
 body {
   margin: 0;
   overflow: hidden;
-  background: var(--stage-b);
+  background: var(--sea-b);
   color: var(--ink);
   font: 400 15px/1.45 var(--font-body);
   padding-left: max(16px, env(safe-area-inset-left, 0px));
@@ -65,9 +75,17 @@ button, input { font: inherit; color: inherit; }
 
 .app {
   position: fixed; inset: 0;
-  background: radial-gradient(ellipse 80% 75% at 40% 42%, var(--stage-a), var(--stage-b));
+  background:
+    radial-gradient(ellipse 48% 46% at 38% 48%, var(--glow), transparent 72%),
+    linear-gradient(170deg, var(--sea-a) 0%, var(--sea-b) 100%);
   overflow: hidden;
 }
+.chart { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.chart path { fill: none; stroke: var(--chart-line); stroke-width: 1.2; }
+.chart path.major { stroke-width: 2; }
+.chart text { fill: var(--chart-text); font: 500 15px var(--font-mono); letter-spacing: .04em; }
+.chart .rose path { stroke: var(--chart-line); stroke-width: 1.4; }
+.chart .rose text { font-size: 18px; }
 #stage { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
 #stage.is-dragging { cursor: grabbing; }
 #stage.is-over { cursor: pointer; }
@@ -80,21 +98,22 @@ button, input { font: inherit; color: inherit; }
   text-shadow: 0 0 6px var(--halo), 0 0 14px var(--halo), 0 0 22px var(--halo);
 }
 .eyebrow {
-  margin: 0; font: 600 13px/1 var(--font-display);
-  letter-spacing: .16em; text-transform: uppercase; color: var(--accent);
+  margin: 0; display: flex; align-items: center; gap: 8px;
+  font: 600 13px/1 var(--font-display); letter-spacing: .2em; text-transform: uppercase; color: var(--egi);
 }
+.eyebrow::before { content: ""; width: 26px; height: 2px; background: var(--egi); }
 h1 {
-  margin: 6px 0 0; font: 700 clamp(26px, 3.4vw, 44px)/.98 var(--font-display);
-  letter-spacing: .005em; text-transform: uppercase; text-wrap: balance;
+  margin: 8px 0 0; font: 800 clamp(30px, 4vw, 54px)/.92 var(--font-display);
+  letter-spacing: .01em; text-transform: uppercase; text-wrap: balance;
 }
-h1 small { display: block; font-size: .55em; font-weight: 500; letter-spacing: .08em; color: var(--muted); margin-top: 4px; }
+h1 small { display: block; font: 500 14px/1.3 var(--font-mono); letter-spacing: .04em; color: var(--muted); margin-top: 10px; text-transform: none; }
 .specs {
-  display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 14px 0 0; padding: 0; list-style: none;
-  font-variant-numeric: tabular-nums;
+  display: flex; flex-wrap: wrap; gap: 8px 0; margin: 16px 0 0; padding: 0; list-style: none;
 }
-.specs li { display: flex; flex-direction: column; }
-.specs b { font: 600 20px/1.05 var(--font-display); }
-.specs span { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.specs li { display: flex; flex-direction: column; gap: 3px; padding: 0 16px; border-left: 1px solid var(--line); }
+.specs li:first-child { padding-left: 0; border-left: 0; }
+.specs b { font: 500 17px/1.05 var(--font-mono); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.specs span { font: 600 11px/1 var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 
 /* Pins */
 .pins { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
@@ -155,6 +174,7 @@ h1 small { display: block; font-size: .55em; font-weight: 500; letter-spacing: .
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
   overflow: hidden;
 }
+.panel::before { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: linear-gradient(90deg, var(--accent), var(--egi)); }
 .detail { padding: 18px 18px 16px; border-bottom: 1px solid var(--line); min-width: 0; }
 .detail .kicker { margin: 0; font: 600 12px/1 var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
 .detail h2 { margin: 6px 0 0; font: 600 26px/1.05 var(--font-display); text-transform: uppercase; text-wrap: balance; }
@@ -201,9 +221,11 @@ h1 small { display: block; font-size: .55em; font-weight: 500; letter-spacing: .
 @media (max-width: 760px) {
   .title { max-width: none; right: var(--gutter-r); top: calc(12px + env(safe-area-inset-top, 0px)); }
   h1 { font-size: 26px; }
-  .specs { margin-top: 8px; gap: 4px 14px; }
-  .specs b { font-size: 16px; }
-  .specs span { font-size: 10px; }
+  .specs { margin-top: 10px; gap: 6px 0; }
+  .specs li { padding: 0 9px; }
+  .specs b { font-size: 13px; }
+  .specs span { font-size: 9.5px; letter-spacing: .1em; }
+  h1 small { margin-top: 5px; font-size: 11.5px; }
   .panel {
     top: auto; left: var(--gutter-l); width: auto; max-height: 47%;
     bottom: calc(10px + env(safe-area-inset-bottom, 0px));
@@ -229,6 +251,7 @@ h1 small { display: block; font-size: .55em; font-weight: 500; letter-spacing: .
 <body>
 <!--page:body-start-->
 <div class="app" id="app">
+  <svg class="chart" id="chart" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"></svg>
   <canvas id="stage" aria-label="Interactive 3D model of the reel. Use the parts list to move the camera to a component."></canvas>
   <div class="pins" id="pins"></div>
   <div class="tip" id="tip" hidden></div>
@@ -236,8 +259,8 @@ h1 small { display: block; font-size: .55em; font-weight: 500; letter-spacing: .
   <div class="linechip" id="linechip"><i id="line-sw" aria-hidden="true"></i><span id="line-m"></span><button type="button" id="line-reset" hidden>Reset line</button></div>
 
   <header class="title">
-    <p class="eyebrow">Daiwa &middot; eging spinning reel</p>
-    <h1>Emeraldas Air <small>PC LT2500-H &middot; 2025</small></h1>
+    <p class="eyebrow">Daiwa &middot; eging reel</p>
+    <h1>Emeraldas Air <small>PC LT2500-H &middot; 2025 &middot; 53-part teardown</small></h1>
     <ul class="specs" aria-label="Key specifications">
       <li><b>175 g</b><span>Weight</span></li>
       <li><b>5.7 : 1</b><span>Gear ratio</span></li>
@@ -296,6 +319,36 @@ var GROUPS = {
 };
 var GROUP_ORDER = ['spool', 'rotor', 'body', 'osc', 'handle'];
 var INFO = {}, ORDER = [], P = {};
+
+/* ------------------------------------------------------- depth chart backdrop */
+// Soundings drawn like a nautical chart: two shoals with depth contours every 5 m and a compass rose.
+(function drawChart() {
+  var svg = document.getElementById('chart'), NS = 'http://www.w3.org/2000/svg', out = '';
+  function shoal(cx, cy, levels, base, step, seed, labelAngle) {
+    for (var k = 0; k < levels; k++) {
+      var R = base + k * step, d = '';
+      for (var a = 0; a <= 180; a++) {
+        var th = a / 180 * Math.PI * 2;
+        var r = R * (1 + 0.09 * Math.sin(3 * th + seed + k * 0.35) + 0.05 * Math.sin(5 * th + seed * 2.1) + 0.025 * Math.sin(8 * th + k));
+        d += (a ? 'L' : 'M') + (cx + r * Math.cos(th)).toFixed(1) + ' ' + (cy + r * Math.sin(th) * 0.72).toFixed(1);
+      }
+      out += '<path class="' + (k % 2 ? 'major' : '') + '" d="' + d + 'Z"/>';
+      if (k % 2) {
+        var th0 = labelAngle, r0 = R * (1 + 0.09 * Math.sin(3 * th0 + seed + k * 0.35) + 0.05 * Math.sin(5 * th0 + seed * 2.1) + 0.025 * Math.sin(8 * th0 + k));
+        out += '<text x="' + (cx + r0 * Math.cos(th0) + 6).toFixed(0) + '" y="' + (cy + r0 * Math.sin(th0) * 0.72 - 6).toFixed(0) + '">' + (k + 1) * 5 + ' m</text>';
+      }
+    }
+  }
+  shoal(1380, 930, 9, 90, 92, 0.7, 3.55);
+  shoal(980, 10, 5, 60, 72, 2.3, 1.1);
+  // compass rose, bottom left
+  var x = 150, y = 820, rose = '<g class="rose">';
+  rose += '<path d="M' + (x - 70) + ' ' + y + 'H' + (x + 70) + 'M' + x + ' ' + (y - 70) + 'V' + (y + 70) + '"/>';
+  rose += '<path d="M' + x + ' ' + (y - 62) + 'L' + (x + 9) + ' ' + y + 'L' + x + ' ' + (y + 62) + 'L' + (x - 9) + ' ' + y + 'Z"/>';
+  rose += '<path d="M' + x + ' ' + y + 'm-44 0a44 44 0 1 0 88 0a44 44 0 1 0 -88 0"/>';
+  rose += '<text x="' + (x - 6) + '" y="' + (y - 78) + '">N</text></g>';
+  svg.innerHTML = out + rose;
+})();
 
 /* -------------------------------------------------------------- renderer */
 var renderer;
@@ -397,6 +450,25 @@ function ring(axis, a, rin, rout, t, seg) {   // washer with softened corners, s
 }
 function torusX(r, tube, x) { var g = new T.TorusGeometry(r, tube, 16, 160); g.rotateY(Math.PI / 2); g.translate(x, 0, 0); return g; }
 function torusZ(r, tube, z) { var g = new T.TorusGeometry(r, tube, 16, 160); g.translate(0, 0, z); return g; }
+function taperTube(path, seg, radial, r0, r1) {   // swept round section whose radius runs from r0 to r1
+  var fr = path.computeFrenetFrames(seg, false), pos = [], idx = [], c = new T.Vector3(), nrm = new T.Vector3();
+  for (var a = 0; a <= seg; a++) {
+    var t = a / seg, r = r0 + (r1 - r0) * t * t * (3 - 2 * t);
+    path.getPointAt(t, c);
+    for (var b = 0; b <= radial; b++) {
+      var v = b / radial * Math.PI * 2, sn = Math.sin(v), cs = -Math.cos(v);
+      nrm.copy(fr.normals[a]).multiplyScalar(cs).addScaledVector(fr.binormals[a], sn).normalize();
+      pos.push(c.x + r * nrm.x, c.y + r * nrm.y, c.z + r * nrm.z);
+    }
+  }
+  for (a = 0; a < seg; a++) for (b = 0; b < radial; b++) {
+    var p0 = a * (radial + 1) + b, p1 = (a + 1) * (radial + 1) + b;
+    idx.push(p0, p1, p0 + 1, p1, p1 + 1, p0 + 1);
+  }
+  var geo = new T.BufferGeometry();
+  geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+  return geo;
+}
 function rodBetween(a, b, ra, rb) {    // tapered round bar from point a to point b
   var va = new T.Vector3(a[0], a[1], a[2]), vb = new T.Vector3(b[0], b[1], b[2]);
   var dir = vb.clone().sub(va), len = dir.length();
@@ -500,7 +572,9 @@ function def(id, parent, o) {
 }
 
 var GX = -1.57, GY = 0.75;   // drive gear / handle axis: 7.5 mm above the spool axis
-var KNOB_Z = 2.3;   // the handle arm angles out about 28°, so the knob passes outside the sweep of the bail wire
+// Measured from the front and three-quarter photos: the knob is a 38 mm I-shaped knob whose base
+// sits about 5.5 cm off the reel's centre line, outside the sweep of the bail wire.
+var KB = 5.6;
 var ARM = 5.5, HANDLE_REST = 0.615, ROTOR_REST = Math.PI / 2, STROKE = 0.69;
 var BODY_R = 2.05, BODY_HALF = 1.15;
 var GUIDE_X = 65, GUIDE_Y = 6.2;      // first (stripping) guide, about 65 cm up the rod from the reel
@@ -545,11 +619,11 @@ washer('felt3', 'Felt drag washer', 4.94, 17.26, 'felt', FELT);
 g = def('spool', osc, { n: 'Spool', g: 'spool', shell: true, ex: [15.9, 0, 0], pin: [2.6, 1.65, 1.62],
   t: 'A shallow 2500-size spool for thin braid. The long skirt slides over the rotor, the ribbed arbor holds the line, and the cup at the front houses the drag stack.',
   f: [['Capacity', 'PE 0.8 – 200 m'], ['Size', 'LT 2500'], ['Family', 'Airdrive spool']] });
-mesh(g, latheX([[1.62, 2.17], [1.63, 2.27], [1.68, 2.3], [3.62, 2.3], [3.72, 2.26], [3.78, 2.14], [3.8, 1.86], [3.84, 1.8], [5.28, 1.8], [5.32, 1.86], [5.34, 2.16],
+mesh(g, latheX([[3.55, 2.12], [1.74, 2.12], [1.68, 2.17], [1.69, 2.27], [1.74, 2.3], [3.62, 2.3], [3.72, 2.26], [3.78, 2.14], [3.8, 1.86], [3.84, 1.8], [5.28, 1.8], [5.32, 1.86], [5.34, 2.16],
   [5.38, 2.26], [5.46, 2.3], [5.56, 2.27], [5.61, 2.18], [5.62, 1.34], [5.58, 1.3], [4.9, 1.3], [4.9, 0.35], [3.9, 0.35], [3.9, 0.6], [3.8, 0.6]], 160), MAT.silver());
 for (i = 0; i < 13; i++) mesh(g, torusX(1.803, 0.014, 3.96 + i * 0.105), MAT.steel());
 mesh(g, torusX(2.24, 0.075, 5.6), MAT.teal());
-mesh(g, torusX(2.3, 0.03, 1.72), MAT.teal());
+mesh(g, torusX(2.3, 0.03, 1.78), MAT.teal());
 
 g = def('spoolBearing', osc, { n: 'Spool bearing', g: 'spool', inside: true, at: [4.2, 0, 0], ex: [12.6, 0, 0], pin: [0, 0.5, 0],
   t: 'Carries the spool on the main shaft so it turns freely and evenly when the drag slips.' });
@@ -579,11 +653,12 @@ mesh(g, cylX(0.11, 1.59, 1.66, 24), MAT.steel(), [0, 0.72, 0]);
 g = def('rotor', rotorSpin, { n: 'Rotor', g: 'rotor', shell: true, ex: [9.3, 0, 0], pin: [0.7, 0, -2.05],
   t: 'Spins around the spool and carries the bail. Each handle turn takes it round 5.7 times. The open arms keep it light so it starts and stops quickly.',
   f: [['Speed', '5.7 turns per handle turn'], ['Retrieve', '80 cm per handle turn'], ['Family', 'Airdrive rotor']] });
-mesh(g, latheX([[0.05, 1.25], [0.05, 2.44], [0.08, 2.5], [0.14, 2.5], [0.17, 2.44], [0.19, 2.1], [0.25, 2.04], [1.16, 2.02], [1.26, 1.94], [1.3, 1.8], [1.3, 0.5]], 160), MAT.body());
+// the cup wall runs on up inside the spool skirt, so there is no open gap between rotor and spool
+mesh(g, latheX([[0.05, 1.25], [0.05, 2.44], [0.08, 2.5], [0.14, 2.5], [0.17, 2.44], [0.19, 2.1], [0.25, 2.04], [2.2, 2.02], [2.27, 1.99], [2.28, 1.94], [1.36, 1.92], [1.3, 1.86], [1.3, 0.5]], 160), MAT.body());
 mesh(g, torusX(2.5, 0.03, 0.11), MAT.teal());
 (function () {
   // One arm, drawn in the plane through the axis: [x, radius]. The inner edge clears the spool skirt.
-  var arm = splineShape([[0.1, 2.2], [0.24, 2.86], [1.3, 3.14], [2.4, 3.12], [3.0, 3.06], [3.28, 2.9], [3.26, 2.64], [2.8, 2.56], [1.9, 2.56], [1.0, 2.55], [0.5, 2.52], [0.22, 2.44]]);
+  var arm = splineShape([[0.12, 2.36], [0.24, 2.9], [1.3, 3.14], [2.4, 3.12], [3.0, 3.06], [3.28, 2.9], [3.26, 2.64], [2.8, 2.58], [1.9, 2.6], [1.0, 2.6], [0.5, 2.6], [0.3, 2.6]]);
   var win = new T.CatmullRomCurve3([[1.45, 2.74], [1.55, 2.94], [2.4, 2.95], [3.0, 2.88], [3.05, 2.74], [2.4, 2.72]].map(function (p) { return new T.Vector3(p[0], p[1], 0); }), true, 'centripetal').getPoints(60);
   var hole = new T.Path(); win.forEach(function (v, k) { if (k) hole.lineTo(v.x, v.y); else hole.moveTo(v.x, v.y); }); hole.closePath();
   arm.holes.push(hole);
@@ -607,10 +682,9 @@ var bailArm = new T.Group(); bailArm.position.set(-RX, 0, 0); bailPivot.add(bail
 g = def('lever', bailArm, { n: 'Bail arm lever', g: 'rotor', ex: [9.3, 2.4, 0], pin: [4.2, 3.52, -0.15],
   t: 'The bail arm over the line roller. It swings on its hinge screw with the bail wire when you open the bail, and carries the roller with it.' });
 (function () {
-  // plate drawn in the x–z plane around the hinge line, then laid flat above the rotor arm
-  var plate = extrude(splineShape([[3.42, 0.22], [3.62, 0.44], [4.05, 0.46], [4.5, 0.22], [4.62, -0.25], [4.32, -0.62], [3.85, -0.66], [3.45, -0.36]]), 0.12, 0.05, 60);
-  plate.rotateX(Math.PI / 2); plate.translate(0, 3.42, 0);
-  mesh(g, plate, MAT.silver());
+  // a smooth domed cover over the line roller, lying on the hinge line so it swings clear of the rotor arm
+  var cap = new T.SphereGeometry(1, 64, 32); cap.scale(0.42, 0.13, 0.5); cap.translate(RX + 0.04, 3.4, -0.04);
+  mesh(g, cap, MAT.silver());
 })();
 
 g = def('leverScrew', rotorSpin, { n: 'Lever screw', g: 'rotor', ex: [9.3, 3.4, 0], pin: [RX, 3.56, 0],
@@ -618,9 +692,9 @@ g = def('leverScrew', rotorSpin, { n: 'Lever screw', g: 'rotor', ex: [9.3, 3.4, 
 mesh(g, new T.CylinderGeometry(0.13, 0.13, 0.07, 32), MAT.black(), [RX, 3.53, 0]);
 mesh(g, new T.CylinderGeometry(0.06, 0.06, 0.4, 16), MAT.steel(), [RX, 3.3, 0]);
 
-g = def('collarA', bailArm, { n: 'Roller collar', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -0.55], pin: [0, 0.24, 0.3],
-  t: 'A spacer that centres the line roller and its bearing on the lever.' });
-mesh(g, ring('z', 0.27, 0.08, 0.24, 0.07, 32), MAT.black());
+g = def('collarA', bailArm, { n: 'Roller bushing', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -0.55], pin: [0, 0.24, 0.3],
+  t: 'A rounded bushing on the bail-arm side that centres the line roller and its bearing.' });
+mesh(g, latheZ(curve([[0.26, 0.1], [0.26, 0.25], [0.28, 0.3], [0.33, 0.31], [0.36, 0.27], [0.37, 0.1]], 30), 64), MAT.silver());   // rounded bushing on the bail-arm side
 g.rotation.x = ROLLER_TILT;
 
 g = def('rollerBearing', bailArm, { n: 'Line roller bearing', g: 'rotor', inside: true, at: [RX, RY, 0.02], ex: [9.3, 2.0, -1.1], pin: [0, 0.17, 0],
@@ -633,9 +707,9 @@ g = def('roller', bailArm, { n: 'Line roller', g: 'rotor', shell: true, at: [RX,
 mesh(g, latheZ(curve([[-0.22, 0.3], [-0.16, 0.22], [0.0, 0.19], [0.18, 0.21], [0.27, 0.3]], 30), 64), MAT.silver());
 g.rotation.x = ROLLER_TILT;
 
-g = def('collarB', bailArm, { n: 'Roller collar', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -2.4], pin: [0, 0.24, -0.26],
-  t: 'The outer spacer, between the line roller and the end of the bail wire.' });
-mesh(g, ring('z', -0.29, 0.08, 0.24, 0.07, 32), MAT.black());
+g = def('collarB', bailArm, { n: 'Roller knuckle', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -2.4], pin: [0, 0.24, -0.26],
+  t: 'The domed knuckle on the outer side of the roller, where the end of the bail wire is fixed.' });
+mesh(g, latheZ(curve([[-0.27, 0.1], [-0.27, 0.27], [-0.31, 0.33], [-0.4, 0.345], [-0.49, 0.29], [-0.55, 0.16], [-0.57, 0]], 40), 64), MAT.silver());   // domed knuckle where the bail wire joins
 g.rotation.x = ROLLER_TILT;
 
 g = def('wire', bailArm, { n: 'Bail wire', g: 'rotor', ex: [10.6, 0, -3.6], pin: [3.7, 0, -WIRE_R],
@@ -649,7 +723,6 @@ g = def('wire', bailArm, { n: 'Bail wire', g: 'rotor', ex: [10.6, 0, -3.6], pin:
     pts.push(new T.Vector3(RX - Math.sin(t) * 0.15, Math.cos(t) * RY + 0.38 * blend, -0.38 * blend - Math.sin(t) * WIRE_R));
   }
   mesh(g, new T.TubeGeometry(new T.CatmullRomCurve3(pts), 200, 0.07, 16), MAT.silver());
-  mesh(g, latheZ(curve([[-0.29, 0.26], [-0.36, 0.25], [-0.5, 0.12], [-0.54, 0]], 20), 48), MAT.silver(), [RX, RY, 0], [ROLLER_TILT, 0, 0]);
 })();
 
 g = def('holder', bailArm, { n: 'Bail holder', g: 'rotor', ex: [9.3, -2.0, 0], pin: [RX + 0.3, -3.0, 0.2],
@@ -819,37 +892,41 @@ g = def('collar', handleSpin, { n: 'Handle collar', g: 'handle', ex: [0, 0, 6.4]
   t: 'A sealing collar between the handle and the side plate.' });
 mesh(g, ring('z', 1.5, 0.3, 0.5, 0.14, 48), MAT.black());
 
-g = def('handle', handleSpin, { n: 'Handle', g: 'handle', ex: [0, 0, 7.4], pin: [0, -2.7, 2.45],
-  t: 'A machined arm that screws straight into the drive gear, so there is no play between hand and gear. The H in the model name marks the high-speed 5.7 : 1 ratio.',
+g = def('handle', handleSpin, { n: 'Handle', g: 'handle', ex: [0, 0, 7.4], pin: [0, -3.3, 5.15],
+  t: 'A machined swan-neck arm. It leaves the side plate sideways, bends and runs 55 mm out to the knob, so your hand turns well clear of the rotor and bail. It screws straight into the drive gear, so there is no play. The H in the model name marks the high-speed 5.7 : 1 ratio.',
   f: [['Length', '55 mm'], ['Gear ratio', '5.7 : 1'], ['Side', 'Swappable left / right']] });
 (function () {
   mesh(g, latheZ(curve([[1.64, 0.4], [1.72, 0.56], [1.9, 0.6], [2.06, 0.52], [2.16, 0.32], [2.18, 0]], 40), 96), MAT.silver());
-  mesh(g, rodBetween([0, 0, 1.92], [0, -ARM, KNOB_Z + 2.5], 0.3, 0.2), MAT.silver());
-  mesh(g, new T.SphereGeometry(0.2, 32, 24), MAT.silver(), [0, -ARM, KNOB_Z + 2.5]);
-  mesh(g, cylZ(0.11, 2.5, 3.95, 24), MAT.steel(), [0, -ARM, KNOB_Z]);
-  mesh(g, ring('z', 2.6, 0.11, 0.26, 0.12, 32), MAT.silver(), [0, -ARM, KNOB_Z]);
+  var arm = new T.CatmullRomCurve3([
+    new T.Vector3(0, 0, 1.95), new T.Vector3(0, -0.12, 2.75), new T.Vector3(0, -0.65, 3.75),
+    new T.Vector3(0, -1.75, 4.55), new T.Vector3(0, -3.3, 4.95), new T.Vector3(0, -ARM + 0.4, 5.15), new T.Vector3(0, -ARM, 5.2)], false, 'centripetal');
+  mesh(g, taperTube(arm, 140, 28, 0.34, 0.2), MAT.silver());
+  mesh(g, new T.SphereGeometry(0.3, 40, 28), MAT.silver(), [0, -ARM, 5.25]);                   // ball joint at the knob
+  mesh(g, cylZ(0.1, 5.25, KB + 3.7, 24), MAT.steel(), [0, -ARM, 0]);                           // knob axle
+  mesh(g, latheZ(curve([[5.38, 0.3], [5.42, 0.42], [5.5, 0.47], [5.56, 0.45], [5.6, 0.36]], 24), 64), MAT.silver(), [0, -ARM, 0]);   // collar under the knob
 })();
 
-g = def('knobBearingA', handleSpin, { n: 'Knob bearing, inner', g: 'handle', inside: true, at: [0, -ARM, KNOB_Z + 2.95], ex: [0, 0, 9.2], pin: [0, 0.3, 0],
-  t: 'One of two ball bearings the knob spins on.' });
+g = def('knobBearingA', handleSpin, { n: 'Knob bearing, inner', g: 'handle', inside: true, at: [0, -ARM, KB + 0.45], ex: [0, 0, 9.2], pin: [0, 0.3, 0],
+  t: 'One of two ball bearings the knob spins on, at the base of the knob.' });
 bearing(g, 'z', 0.3, 0.16);
 
-g = def('knob', handleSpin, { n: 'Handle knob', g: 'handle', shell: true, at: [0, -ARM, KNOB_Z], ex: [0, 0, 10.2], pin: [0, 1.15, 3.85],
-  t: 'A round, flat knob that is easy to find without looking and comfortable to pinch through a long session of jerks and fast slack recovery.' });
-mesh(g, latheZ(curve([[2.76, 0.34], [2.78, 0.9], [2.9, 1.22], [3.15, 1.35], [3.55, 1.35], [3.8, 1.22], [3.93, 0.95], [3.95, 0.78]], 60), 128), MAT.rubber());
+g = def('knob', handleSpin, { n: 'Handle knob', g: 'handle', shell: true, at: [0, -ARM, 0], ex: [0, 0, 10.2], pin: [0, 0.95, KB + 2.3],
+  t: 'A long I-shaped knob, 38 mm long and flaring from about 12 to 18 mm across. You hold it between thumb and fingers, which gives steady control through a long session of jerks and fast slack recovery.',
+  f: [['Length', 'About 38 mm']] });
+mesh(g, latheZ(curve([[KB, 0.12], [KB, 0.5], [KB + 0.1, 0.6], [KB + 1.1, 0.65], [KB + 2.3, 0.75], [KB + 3.25, 0.86], [KB + 3.6, 0.86], [KB + 3.72, 0.74], [KB + 3.76, 0.58]], 90), 128), MAT.rubber());
 
-g = def('knobBearingB', handleSpin, { n: 'Knob bearing, outer', g: 'handle', inside: true, at: [0, -ARM, KNOB_Z + 3.7], ex: [0, 0, 11.2], pin: [0, 0.3, 0],
-  t: 'The second knob bearing, under the cap.' });
+g = def('knobBearingB', handleSpin, { n: 'Knob bearing, outer', g: 'handle', inside: true, at: [0, -ARM, KB + 3.4], ex: [0, 0, 11.2], pin: [0, 0.3, 0],
+  t: 'The second knob bearing, at the far end under the cap.' });
 bearing(g, 'z', 0.3, 0.16);
 
-g = def('knobScrew', handleSpin, { n: 'Knob screw', g: 'handle', inside: true, at: [0, 0, KNOB_Z], ex: [0, 0, 11.8], pin: [0.13, -ARM, 3.95],
+g = def('knobScrew', handleSpin, { n: 'Knob screw', g: 'handle', inside: true, ex: [0, 0, 11.8], pin: [0.13, -ARM, KB + 3.72],
   t: 'Holds the knob on its axle. It sits under the knob cap.' });
-screwZ(g, [0, -ARM, 3.88], 1);
+screwZ(g, [0, -ARM, KB + 3.66], 1);
 
-g = def('knobCap', handleSpin, { n: 'Knob cap', g: 'handle', at: [0, -ARM, KNOB_Z], ex: [0, 0, 12.5], pin: [0.4, 0.4, 4.05],
-  t: 'A metal cap that closes the knob. The two holes take a pin tool for removing it.' });
-mesh(g, latheZ(curve([[3.93, 0.8], [3.99, 0.78], [4.04, 0.6], [4.06, 0.3], [4.06, 0]], 30), 96), MAT.silver());
-mesh(g, cylZ(0.07, 4.0, 4.062, 20), MAT.black(), [0.32, 0, 0]); mesh(g, cylZ(0.07, 4.0, 4.062, 20), MAT.black(), [-0.32, 0, 0]);
+g = def('knobCap', handleSpin, { n: 'Knob cap', g: 'handle', at: [0, -ARM, 0], ex: [0, 0, 12.5], pin: [0.3, 0.3, KB + 3.84],
+  t: 'Closes the end of the knob. The two holes take a pin tool for removing it.' });
+mesh(g, latheZ(curve([[KB + 3.72, 0.58], [KB + 3.78, 0.56], [KB + 3.83, 0.42], [KB + 3.85, 0.2], [KB + 3.85, 0]], 30), 96), MAT.dark());
+mesh(g, cylZ(0.06, KB + 3.8, KB + 3.86, 20), MAT.black(), [0.26, 0, 0]); mesh(g, cylZ(0.06, KB + 3.8, KB + 3.86, 20), MAT.black(), [-0.26, 0, 0]);
 
 /* --- finish ------------------------------------------------------------ */
 // Centre lines for the exploded view, like the dashed lines on a parts diagram
@@ -862,8 +939,8 @@ var axes = new T.Group(); root.add(axes);
   }
   var kx = GX + Math.sin(HANDLE_REST) * ARM, ky = GY - Math.cos(HANDLE_REST) * ARM;
   dashed([-6.5, 0, 0], [28.5, 0, 0]);
-  dashed([GX, GY, -4.4], [GX, GY, 17.4]);
-  dashed([kx, ky, 9.6], [kx, ky, 17.4]);
+  dashed([GX, GY, -4.4], [GX, GY, KB + 14]);
+  dashed([kx, ky, KB + 4], [kx, ky, KB + 14]);
 })();
 
 ORDER.sort(function (a, b) { return GROUP_ORDER.indexOf(INFO[a].group) - GROUP_ORDER.indexOf(INFO[b].group); });
@@ -1221,9 +1298,9 @@ function crankStart(e) {
   handleSpin.getWorldPosition(hub);
   var c = screenOf(hub.clone());
   // which way does the knob move on screen when the handle winds forward?
-  var p0 = screenOf(handleSpin.localToWorld(probe.set(0, -ARM, KNOB_Z + 2.5)).clone());
+  var p0 = screenOf(handleSpin.localToWorld(probe.set(0, -ARM, KB + 1.9)).clone());
   handleSpin.rotation.z -= 0.05; handleSpin.updateMatrixWorld(true);
-  var p1 = screenOf(handleSpin.localToWorld(probe.set(0, -ARM, KNOB_Z + 2.5)).clone());
+  var p1 = screenOf(handleSpin.localToWorld(probe.set(0, -ARM, KB + 1.9)).clone());
   handleSpin.rotation.z += 0.05; handleSpin.updateMatrixWorld(true);
   var d = Math.atan2(p1[1] - c[1], p1[0] - c[0]) - Math.atan2(p0[1] - c[1], p0[0] - c[0]);
   crank = { cx: c[0] + r.left, cy: c[1] + r.top, sign: Math.sin(d) >= 0 ? 1 : -1, last: Math.atan2(e.clientY - (c[1] + r.top), e.clientX - (c[0] + r.left)) };
