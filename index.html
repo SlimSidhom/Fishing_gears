@@ -433,6 +433,9 @@ function latheX(pts, seg) {            // profile as [along-axis, radius], axis 
   var g = new T.LatheGeometry(pts.map(function (p) { return new T.Vector2(p[1], p[0]); }), seg || 128);
   g.rotateZ(-Math.PI / 2); return g;
 }
+function latheY(pts, seg) {            // axis = +Y
+  return new T.LatheGeometry(pts.map(function (p) { return new T.Vector2(p[1], p[0]); }), seg || 128);
+}
 function latheZ(pts, seg) {            // axis = +Z
   var g = new T.LatheGeometry(pts.map(function (p) { return new T.Vector2(p[1], p[0]); }), seg || 128);
   g.rotateX(Math.PI / 2); return g;
@@ -516,6 +519,7 @@ function extrude(shape, depth, bevel, crease) {
   g.translate(0, 0, -depth / 2);
   return smooth(g, crease || 42);
 }
+function poly(pts) { var sh = new T.Shape(); pts.forEach(function (q, k) { if (k) sh.lineTo(q[0], q[1]); else sh.moveTo(q[0], q[1]); }); sh.closePath(); return sh; }
 function splineShape(pts) {            // closed smooth outline through the points
   var s = new T.Shape();
   var c = new T.SplineCurve(pts.concat([pts[0]]).map(function (p) { return new T.Vector2(p[0], p[1]); }));
@@ -586,12 +590,34 @@ var handleSpin = new T.Group(); handleSpin.position.set(GX, GY, 0); root.add(han
 /* --- Spool and drag ---------------------------------------------------- */
 var FELT = 'Soaked in drag grease, it slips against the metal washers on either side. That controlled slip is the drag.';
 var g, i;
-g = def('dragKnob', osc, { n: 'Drag knob', g: 'spool', shell: true, ex: [21.1, 0, 0], pin: [6.5, 0.5, 0.6],
-  t: 'Screws onto the tip of the main shaft and presses on the washer stack inside the spool. More turns, more pressure, more drag.',
+g = def('dragKnob', osc, { n: 'Drag knob', g: 'spool', shell: true, ex: [21.1, 0, 0], pin: [6.12, 1.3, 0.45],
+  t: 'A full-width I-beam bar on a black ringed face. It screws onto the tip of the main shaft and presses on the washer stack inside the spool: more turns, more pressure, more drag. The long bar gives plenty of grip for fine changes with wet fingers.',
   f: [['Max drag', '10 kg']] });
-mesh(g, latheX(curve([[5.5, 0.5], [5.5, 0.95], [5.62, 1.02], [5.64, 1.16], [5.78, 1.22], [6.18, 1.18], [6.4, 1.02], [6.48, 0.6], [6.5, 0.36]], 60)), MAT.black());
-for (i = 0; i < 3; i++) mesh(g, smooth(new T.CapsuleGeometry(0.13, 1.9, 6, 16)), MAT.dark(), [6.44, 0, 0], [i * Math.PI / 3, 0, 0]);
-mesh(g, latheX([[6.44, 0.4], [6.56, 0.4], [6.6, 0.34], [6.6, 0]], 64), MAT.silver());
+(function () {
+  // black face filling the spool cup, with fine concentric rings
+  var face = [[5.5, 0.6], [5.5, 1.25], [5.6, 1.3], [5.63, 2.08], [5.66, 2.12], [5.7, 2.1]];
+  for (var r = 2.0; r > 0.42; r -= 0.13) face.push([5.7, r], [5.725, r - 0.03], [5.725, r - 0.07], [5.7, r - 0.1]);
+  face.push([5.7, 0.4], [5.72, 0.36], [5.72, 0]);
+  mesh(g, latheX(face, 160), MAT.black());
+  mesh(g, torusX(1.62, 0.028, 5.73), MAT.silver());                         // fine silver ring on the face
+  // the bar: flared T-ends, a slim waist, running almost across the spool
+  var half = [[1.9, 0.5], [1.8, 0.52], [1.68, 0.4], [1.5, 0.2], [1.2, 0.15], [0.6, 0.13], [0.42, 0.2]];
+  var outline = [];
+  half.forEach(function (q) { outline.push([q[1], q[0]]); });
+  half.slice().reverse().forEach(function (q) { outline.push([q[1], -q[0]]); });
+  half.forEach(function (q) { outline.push([-q[1], -q[0]]); });
+  half.slice().reverse().forEach(function (q) { outline.push([-q[1], q[0]]); });
+  var bar = extrude(poly(outline), 0.22, 0.07, 50);
+  bar.rotateY(Math.PI / 2); bar.translate(5.92, 0, 0);
+  mesh(g, bar, MAT.silver());
+  // raised spine along the bar
+  var spine = extrude(poly([[0.05, 1.86], [0.05, -1.86], [-0.05, -1.86], [-0.05, 1.86]]), 0.08, 0.035, 30);
+  spine.rotateY(Math.PI / 2); spine.translate(6.07, 0, 0);
+  mesh(g, spine, MAT.silver());
+  // centre hub: black badge in a polished rim
+  mesh(g, latheX(curve([[5.95, 0.46], [6.02, 0.46], [6.1, 0.42], [6.13, 0.36], [6.13, 0]], 30), 96), MAT.silver());
+  mesh(g, cylX(0.33, 6.12, 6.15, 64), MAT.black());
+})();
 
 g = def('dragSeal', osc, { n: 'Drag knob seal', g: 'spool', inside: true, ex: [20.35, 0, 0], pin: [5.56, 1.08, 0],
   t: 'A rubber ring under the knob that keeps salt water and sand out of the drag washers.' });
@@ -680,11 +706,13 @@ var BAIL_OPEN = -2.97;     // about 170°: the wire swings forward round the fro
 var bailPivot = new T.Group(); bailPivot.position.set(RX, 0, 0); rotorSpin.add(bailPivot);
 var bailArm = new T.Group(); bailArm.position.set(-RX, 0, 0); bailPivot.add(bailArm);
 g = def('lever', bailArm, { n: 'Bail arm lever', g: 'rotor', ex: [9.3, 2.4, 0], pin: [4.2, 3.52, -0.15],
-  t: 'The bail arm over the line roller. It swings on its hinge screw with the bail wire when you open the bail, and carries the roller with it.' });
+  t: 'The bail arm. It runs from the hinge screw down into the roller end cap, holding the line roller, and swings with the bail wire when you open the bail.' });
 (function () {
-  // a smooth domed cover over the line roller, lying on the hinge line so it swings clear of the rotor arm
-  var cap = new T.SphereGeometry(1, 64, 32); cap.scale(0.42, 0.13, 0.5); cap.translate(RX + 0.04, 3.4, -0.04);
-  mesh(g, cap, MAT.silver());
+  // the bail arm: a hinge boss under the screw, sweeping down the outer side into the roller cap
+  mesh(g, latheY(curve([[3.32, 0.3], [3.36, 0.34], [3.44, 0.33], [3.49, 0.26], [3.5, 0]], 24), 64), MAT.silver(), [RX, 0, 0]);
+  var path = new T.CatmullRomCurve3([new T.Vector3(RX + 0.02, 3.42, -0.12), new T.Vector3(RX + 0.08, 3.46, -0.36),
+    new T.Vector3(RX + 0.06, 3.36, -0.58), new T.Vector3(RX + 0.02, 3.2, -0.68)], false, 'centripetal');
+  mesh(g, taperTube(path, 40, 24, 0.2, 0.24), MAT.silver());
 })();
 
 g = def('leverScrew', rotorSpin, { n: 'Lever screw', g: 'rotor', ex: [9.3, 3.4, 0], pin: [RX, 3.56, 0],
@@ -694,7 +722,7 @@ mesh(g, new T.CylinderGeometry(0.06, 0.06, 0.4, 16), MAT.steel(), [RX, 3.3, 0]);
 
 g = def('collarA', bailArm, { n: 'Roller bushing', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -0.55], pin: [0, 0.24, 0.3],
   t: 'A rounded bushing on the bail-arm side that centres the line roller and its bearing.' });
-mesh(g, latheZ(curve([[0.26, 0.1], [0.26, 0.25], [0.28, 0.3], [0.33, 0.31], [0.36, 0.27], [0.37, 0.1]], 30), 64), MAT.silver());   // rounded bushing on the bail-arm side
+mesh(g, latheZ(curve([[0.25, 0.1], [0.25, 0.3], [0.28, 0.35], [0.34, 0.36], [0.38, 0.31], [0.39, 0.1]], 30), 64), MAT.silver());   // polished bushing on the inner side
 g.rotation.x = ROLLER_TILT;
 
 g = def('rollerBearing', bailArm, { n: 'Line roller bearing', g: 'rotor', inside: true, at: [RX, RY, 0.02], ex: [9.3, 2.0, -1.1], pin: [0, 0.17, 0],
@@ -704,12 +732,13 @@ g.rotation.x = ROLLER_TILT;
 
 g = def('roller', bailArm, { n: 'Line roller', g: 'rotor', shell: true, at: [RX, RY, 0], ex: [9.3, 2.0, -1.75], pin: [0, 0.3, 0], v: [1.4, 0.85],
   t: 'The only place the line touches the reel under load. The line runs over its waisted groove, and the roller is set at an angle so the line from the rod and the line going on to the spool stay in the groove. Rinse it after salt water.' });
-mesh(g, latheZ(curve([[-0.22, 0.3], [-0.16, 0.22], [0.0, 0.19], [0.18, 0.21], [0.27, 0.3]], 30), 64), MAT.silver());
+mesh(g, latheZ(curve([[-0.25, 0.31], [-0.21, 0.33], [-0.15, 0.3], [-0.1, 0.23], [0.0, 0.19], [0.1, 0.23], [0.15, 0.3], [0.21, 0.33], [0.25, 0.31]], 60), 64), MAT.dark());
+[-0.2, 0.2].forEach(function (z) { mesh(g, torusZ(0.325, 0.012, z), MAT.bronze()); });   // the dark ringed roller of the photo
 g.rotation.x = ROLLER_TILT;
 
-g = def('collarB', bailArm, { n: 'Roller knuckle', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -2.4], pin: [0, 0.24, -0.26],
-  t: 'The domed knuckle on the outer side of the roller, where the end of the bail wire is fixed.' });
-mesh(g, latheZ(curve([[-0.27, 0.1], [-0.27, 0.27], [-0.31, 0.33], [-0.4, 0.345], [-0.49, 0.29], [-0.55, 0.16], [-0.57, 0]], 40), 64), MAT.silver());   // domed knuckle where the bail wire joins
+g = def('collarB', bailArm, { n: 'Roller end cap', g: 'rotor', at: [RX, RY, 0], ex: [9.3, 2.0, -2.4], pin: [0, 0.24, -0.26],
+  t: 'The big rounded cap on the outer end of the roller. The bail wire and the bail arm both meet here, and its smooth shape lets the line slide off when you cast.' });
+mesh(g, latheZ(curve([[-0.26, 0.1], [-0.26, 0.36], [-0.3, 0.42], [-0.42, 0.45], [-0.58, 0.43], [-0.7, 0.35], [-0.78, 0.2], [-0.8, 0]], 60), 96), MAT.body());   // big rounded end cap where the bail wire and arm join
 g.rotation.x = ROLLER_TILT;
 
 g = def('wire', bailArm, { n: 'Bail wire', g: 'rotor', ex: [10.6, 0, -3.6], pin: [3.7, 0, -WIRE_R],
@@ -720,7 +749,7 @@ g = def('wire', bailArm, { n: 'Bail wire', g: 'rotor', ex: [10.6, 0, -3.6], pin:
   for (var k = 0; k <= 40; k++) {
     var t = k / 40 * Math.PI;
     var blend = Math.pow(1 - k / 40, 3);   // start at the tip of the tilted wire cone on the roller
-    pts.push(new T.Vector3(RX - Math.sin(t) * 0.15, Math.cos(t) * RY + 0.38 * blend, -0.38 * blend - Math.sin(t) * WIRE_R));
+    pts.push(new T.Vector3(RX - Math.sin(t) * 0.15, Math.cos(t) * RY + 0.3 * blend, -0.5 * blend - Math.sin(t) * WIRE_R));
   }
   mesh(g, new T.TubeGeometry(new T.CatmullRomCurve3(pts), 200, 0.07, 16), MAT.silver());
 })();
@@ -1524,24 +1553,11 @@ function updateLine() {
     pRoll.copy(LP[n - 1]);
     pt(GUIDE.x, GUIDE.y, GUIDE.z);
   } else {
-    // bail open: the open bail wire has dragged the line down, so it comes off the front lip on the
-    // wire's side, runs under the middle of the wire and then hangs slack to the guide
+    // bail open: nothing holds the line. It comes off the top of the front lip, toward the rod and
+    // above the open bail wire, and hangs slack to the guide.
     var sag = 7 * state.slack * state.slack * (3 - 2 * state.slack), sway = Math.sin(performance.now() / 900) * 0.25 * state.slack;
-    P.wire.anchor.getWorldPosition(vW); root.worldToLocal(vW);
-    // work in the half-plane through the spool axis and the middle of the wire: x along the axis, u outward
-    var phi = Math.atan2(vW.z, vW.y), cp = Math.cos(phi), sp = Math.sin(phi);
-    var wx = vW.x, wu = Math.hypot(vW.y, vW.z), rho = 0.15, lx = 5.46 + ox, lu = 2.37;
-    var gxx = GUIDE.x - wx, guu = (GUIDE.y * cp + GUIDE.z * sp) - wu, lxx = lx - wx, luu = lu - wu;
-    // the line pulls toward the lip and toward the guide, so it wraps round the far side of the wire
-    var aIn2 = Math.atan2(guu, gxx) + Math.acos(Math.min(1, rho / Math.hypot(gxx, guu)));
-    var aOut2 = Math.atan2(luu, lxx) - Math.acos(Math.min(1, rho / Math.hypot(lxx, luu)));
-    while (aOut2 < aIn2) aOut2 += Math.PI * 2;
-    pt(5.12 + ox, rp * cp, rp * sp); pt(lx, lu * cp, lu * sp);
-    for (k = 0; k <= 6; k++) {
-      var th2 = aOut2 + (aIn2 - aOut2) * k / 6, uu = wu + rho * Math.sin(th2);
-      pt(wx + rho * Math.cos(th2), uu * cp, uu * sp);
-    }
-    pRoll.copy(LP[n - 1]);
+    pt(5.05 + ox, rp, 0); pt(5.52 + ox, 2.42, 0);
+    pRoll.copy(LP[1]);
     for (k = 1; k <= 30; k++) {
       var f = k / 30, d = 4 * f * (1 - f);
       pt(pRoll.x + (GUIDE.x - pRoll.x) * f, pRoll.y + (GUIDE.y - pRoll.y) * f - sag * d, pRoll.z + (GUIDE.z - pRoll.z) * f + sway * d);
