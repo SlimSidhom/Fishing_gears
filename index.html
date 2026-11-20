@@ -1000,7 +1000,7 @@ var BRAID_NAMES = ['yellow', 'blue', 'green', 'purple', 'red'];
 function sectionOf(m) { return ((Math.floor(m / SECTION) % BRAID.length) + BRAID.length) % BRAID.length; }
 var lineGroup = new T.Group(); root.add(lineGroup);
 var segGeo = new T.CylinderGeometry(1, 1, 1, 10, 1, true), pieces = [];
-for (i = 0; i < 40; i++) { var pc = new T.Mesh(segGeo, new T.MeshStandardMaterial({ roughness: 0.55 })); lineGroup.add(pc); pieces.push(pc); }
+for (i = 0; i < 64; i++) { var pc = new T.Mesh(segGeo, new T.MeshStandardMaterial({ roughness: 0.55 })); lineGroup.add(pc); pieces.push(pc); }
 var tagMat = new T.MeshStandardMaterial({ color: 0xffffff, emissive: 0x555555, roughness: 0.4 });
 var tagEdge = new T.MeshBasicMaterial({ color: 0x14171b, side: T.BackSide });
 var TAGS = 7, TAG_SPAN = 15, tagGeo = new T.ConeGeometry(0.09, 0.28, 18), tags = [];
@@ -1031,7 +1031,7 @@ function placeSeg(m, a, b, r) {
   m.quaternion.setFromUnitVectors(yAxis, vd.multiplyScalar(1 / len));
   m.scale.set(r, len, r);
 }
-var LP = []; for (i = 0; i < 48; i++) LP.push(new T.Vector3());
+var LP = []; for (i = 0; i < 72; i++) LP.push(new T.Vector3());
 var vW = new T.Vector3();
 var GUIDE = new T.Vector3(GUIDE_X, GUIDE_Y, 0), pRoll = new T.Vector3(), pTouch = new T.Vector3(), pMid = new T.Vector3();
 // Draw the visible line as straight pieces, splitting a piece where the next 5 m colour starts.
@@ -1553,13 +1553,25 @@ function updateLine() {
     pRoll.copy(LP[n - 1]);
     pt(GUIDE.x, GUIDE.y, GUIDE.z);
   } else {
-    // bail open: nothing holds the line. It falls off the bottom of the front lip and hangs loose,
-    // dropping below the open bail wire (without touching it) before rising to the rod guide.
-    var e = state.slack * state.slack * (3 - 2 * state.slack), sag = 31 * e, sway = Math.sin(performance.now() / 900) * 0.4 * e;
-    pt(5.05 + ox, -rp, 0); pt(5.52 + ox, -2.42, 0);
-    pRoll.copy(LP[1]);
-    for (k = 1; k <= 36; k++) {
-      var f = Math.pow(k / 36, 1.6), d = 4 * f * (1 - f);      // points packed near the reel, where the drop is steep
+    // bail open: nothing holds the line. It slides off the front lip on the side where the open bail
+    // hangs, passes loosely under the bail wire (about 5 mm clear, so the wire never pulls it tight),
+    // then hangs slack to the rod guide. Worked in the half-plane through the spool axis and the
+    // middle of the wire: x along the axis, u outward from it.
+    var e = state.slack * state.slack * (3 - 2 * state.slack), sag = 22 * e, sway = Math.sin(performance.now() / 900) * 0.4 * e;
+    P.wire.anchor.getWorldPosition(vW); root.worldToLocal(vW);
+    var phi = Math.atan2(vW.z, vW.y), cp = Math.cos(phi), sp = Math.sin(phi);
+    var wx = vW.x, wu = Math.hypot(vW.y, vW.z), lx = 5.52 + ox, ctl;
+    if (lx >= wx - 0.4) {      // lip in front of the wire: drop down in front of it, then curl back under it
+      ctl = [[lx, 2.42], [Math.max(lx, wx + 0.45) - 0.05, wu - 0.35], [wx + 0.25, wu + 0.4], [wx - 0.15, wu + 0.55], [wx + 0.5, wu + 1.05], [wx + 1.2, wu + 1.9]];
+    } else {                   // spool at the back of its stroke, lip behind the wire: straight out and under it
+      ctl = [[lx, 2.42], [lx - 0.05, wu + 0.55], [wx + 0.5, wu + 1.05], [wx + 1.2, wu + 1.9]];
+    }
+    pt(5.05 + ox, rp * cp, rp * sp);
+    var hook = new T.CatmullRomCurve3(ctl.map(function (q) { return new T.Vector3(q[0], q[1] * cp, q[1] * sp); }), false, 'centripetal');
+    for (k = 0; k <= 12; k++) { hook.getPoint(k / 12, pMid); pt(pMid.x, pMid.y, pMid.z); }
+    pRoll.copy(LP[n - 1]);
+    for (k = 1; k <= 28; k++) {
+      var f = Math.pow(k / 28, 1.5), d = 4 * f * (1 - f);
       pt(pRoll.x + (GUIDE.x - pRoll.x) * f, pRoll.y + (GUIDE.y - pRoll.y) * f - sag * d, pRoll.z + (GUIDE.z - pRoll.z) * f + sway * d);
     }
   }
