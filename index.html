@@ -1553,13 +1553,13 @@ function updateLine() {
     pRoll.copy(LP[n - 1]);
     pt(GUIDE.x, GUIDE.y, GUIDE.z);
   } else {
-    // bail open: nothing holds the line. It comes off the top of the front lip, toward the rod and
-    // above the open bail wire, and hangs slack to the guide.
-    var sag = 7 * state.slack * state.slack * (3 - 2 * state.slack), sway = Math.sin(performance.now() / 900) * 0.25 * state.slack;
-    pt(5.05 + ox, rp, 0); pt(5.52 + ox, 2.42, 0);
+    // bail open: nothing holds the line. It falls off the bottom of the front lip and hangs loose,
+    // dropping below the open bail wire (without touching it) before rising to the rod guide.
+    var e = state.slack * state.slack * (3 - 2 * state.slack), sag = 31 * e, sway = Math.sin(performance.now() / 900) * 0.4 * e;
+    pt(5.05 + ox, -rp, 0); pt(5.52 + ox, -2.42, 0);
     pRoll.copy(LP[1]);
-    for (k = 1; k <= 30; k++) {
-      var f = k / 30, d = 4 * f * (1 - f);
+    for (k = 1; k <= 36; k++) {
+      var f = Math.pow(k / 36, 1.6), d = 4 * f * (1 - f);      // points packed near the reel, where the drop is steep
       pt(pRoll.x + (GUIDE.x - pRoll.x) * f, pRoll.y + (GUIDE.y - pRoll.y) * f - sag * d, pRoll.z + (GUIDE.z - pRoll.z) * f + sway * d);
     }
   }
