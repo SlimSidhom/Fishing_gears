@@ -1000,7 +1000,7 @@ var BRAID_NAMES = ['yellow', 'blue', 'green', 'purple', 'red'];
 function sectionOf(m) { return ((Math.floor(m / SECTION) % BRAID.length) + BRAID.length) % BRAID.length; }
 var lineGroup = new T.Group(); root.add(lineGroup);
 var segGeo = new T.CylinderGeometry(1, 1, 1, 10, 1, true), pieces = [];
-for (i = 0; i < 64; i++) { var pc = new T.Mesh(segGeo, new T.MeshStandardMaterial({ roughness: 0.55 })); lineGroup.add(pc); pieces.push(pc); }
+for (i = 0; i < 132; i++) { var pc = new T.Mesh(segGeo, new T.MeshStandardMaterial({ roughness: 0.55 })); lineGroup.add(pc); pieces.push(pc); }
 var tagMat = new T.MeshStandardMaterial({ color: 0xffffff, emissive: 0x555555, roughness: 0.4 });
 var tagEdge = new T.MeshBasicMaterial({ color: 0x14171b, side: T.BackSide });
 var TAGS = 7, TAG_SPAN = 15, tagGeo = new T.ConeGeometry(0.09, 0.28, 18), tags = [];
@@ -1031,7 +1031,7 @@ function placeSeg(m, a, b, r) {
   m.quaternion.setFromUnitVectors(yAxis, vd.multiplyScalar(1 / len));
   m.scale.set(r, len, r);
 }
-var LP = []; for (i = 0; i < 72; i++) LP.push(new T.Vector3());
+var LP = []; for (i = 0; i < 136; i++) LP.push(new T.Vector3());
 var vW = new T.Vector3();
 var GUIDE = new T.Vector3(GUIDE_X, GUIDE_Y, 0), pRoll = new T.Vector3(), pTouch = new T.Vector3(), pMid = new T.Vector3();
 // Draw the visible line as straight pieces, splitting a piece where the next 5 m colour starts.
@@ -1532,7 +1532,11 @@ function updateLine() {
   lineGroup.visible = !state.xray && isAssembled();
   lineEl.hidden = !lineGroup.visible;
   if (!lineGroup.visible) return;
-  var r = rotorSpin.rotation.x, ox = osc.position.x, open = state.bail > 0.5, n = 0, k;
+  var r = rotorSpin.rotation.x, ox = osc.position.x, n = 0, k;
+  P.wire.anchor.getWorldPosition(vW); root.worldToLocal(vW);
+  var wu = Math.hypot(vW.y, vW.z);
+  // the line comes off the roller once the bail is open and the wire has swung round past the spool lip
+  var open = state.bail > 0.5 && wu > 2.9;
   function pt(x, y, z) { return LP[n++].set(x, y, z); }
   if (!open) {
     // spool: the line leaves the spool where it is tangent to the line already wound on
@@ -1553,25 +1557,29 @@ function updateLine() {
     pRoll.copy(LP[n - 1]);
     pt(GUIDE.x, GUIDE.y, GUIDE.z);
   } else {
-    // bail open: nothing holds the line. It slides off the front lip on the side where the open bail
-    // hangs, passes loosely under the bail wire (about 5 mm clear, so the wire never pulls it tight),
-    // then hangs slack to the rod guide. Worked in the half-plane through the spool axis and the
-    // middle of the wire: x along the axis, u outward from it.
-    var e = state.slack * state.slack * (3 - 2 * state.slack), sag = 22 * e, sway = Math.sin(performance.now() / 900) * 0.4 * e;
-    P.wire.anchor.getWorldPosition(vW); root.worldToLocal(vW);
+    // bail open: the wire swings round and drags the line down with it. The line comes off the front
+    // lip on the wire's side, drops into the open bail and lies loosely on the inner side of the wire
+    // at its lowest point (so the wire is under it and, seen from outside, covers it), then rises back
+    // up in front of the spool and runs, slack, to the rod guide. Worked in the half-plane through the
+    // spool axis and the middle of the wire: x along the axis, u outward.
+    var e = state.slack * state.slack * (3 - 2 * state.slack), sway = Math.sin(performance.now() / 900) * 0.3 * e;
     var phi = Math.atan2(vW.z, vW.y), cp = Math.cos(phi), sp = Math.sin(phi);
-    var wx = vW.x, wu = Math.hypot(vW.y, vW.z), lx = 5.52 + ox, ctl;
-    if (lx >= wx - 0.4) {      // lip in front of the wire: drop down in front of it, then curl back under it
-      ctl = [[lx, 2.42], [Math.max(lx, wx + 0.45) - 0.05, wu - 0.35], [wx + 0.25, wu + 0.4], [wx - 0.15, wu + 0.55], [wx + 0.5, wu + 1.05], [wx + 1.2, wu + 1.9]];
-    } else {                   // spool at the back of its stroke, lip behind the wire: straight out and under it
-      ctl = [[lx, 2.42], [lx - 0.05, wu + 0.55], [wx + 0.5, wu + 1.05], [wx + 1.2, wu + 1.9]];
-    }
+    var wx = vW.x, lx = 5.52 + ox;
+    var cx = wx + 0.02, cu = wu - 0.255;                                  // just inside the wire, directly above it
+    function hp(x, u, side) { return new T.Vector3(x, u * cp - (side || 0) * sp, u * sp + (side || 0) * cp); }
+    var S = -1;                                                           // climbs on the handle side, where the roller sits
+    var ctl = [hp(lx, 2.42), hp((lx + cx) / 2 + 0.15 * e, (2.42 + cu) / 2 + 0.25 * e), hp(cx, cu),
+      hp(cx + 0.55, cu - 0.3, 0.5 * S),                                    // off the wire, forward
+      hp(lx + 0.25, 1.75, 1.75 * S), hp(lx + 0.3, 0.0, 2.47 * S),          // up round the front edge of the lip
+      hp(lx + 0.4, -1.75, 1.75 * S), hp(lx + 0.6, -2.47, 0.0),             // over the top
+      hp(lx + 1.6, -2.85, 0.0)];                                           // easing away toward the rod
     pt(5.05 + ox, rp * cp, rp * sp);
-    var hook = new T.CatmullRomCurve3(ctl.map(function (q) { return new T.Vector3(q[0], q[1] * cp, q[1] * sp); }), false, 'centripetal');
-    for (k = 0; k <= 12; k++) { hook.getPoint(k / 12, pMid); pt(pMid.x, pMid.y, pMid.z); }
+    var loop = new T.CatmullRomCurve3(ctl, false, 'centripetal');
+    for (k = 0; k <= 56; k++) { loop.getPoint(k / 56, pMid); pt(pMid.x, pMid.y, pMid.z); }
     pRoll.copy(LP[n - 1]);
-    for (k = 1; k <= 28; k++) {
-      var f = Math.pow(k / 28, 1.5), d = 4 * f * (1 - f);
+    var sag = 5 * e;
+    for (k = 1; k <= 64; k++) {
+      var f = Math.pow(k / 64, 1.6), d = 4 * f * (1 - f);
       pt(pRoll.x + (GUIDE.x - pRoll.x) * f, pRoll.y + (GUIDE.y - pRoll.y) * f - sag * d, pRoll.z + (GUIDE.z - pRoll.z) * f + sway * d);
     }
   }
@@ -1644,7 +1652,8 @@ function frame(now) {
 pose(); applyExplode(); renderDetail(); syncPins(); paint();
 resize(); goHome(true); applyCamera();
 requestAnimationFrame(frame);
-window.__reel = { select: select, state: state, setXray: setXray, snap: snap, pose: pose, parts: P, three: T, setStrip: setStrip, setBail: setBail, advance: advance, LINE: LINE, bailPivot: bailPivot, root: root, updateLine: updateLine, pieces: pieces };
+window.__reel = { select: select, state: state, setXray: setXray, snap: snap, pose: pose, parts: P, three: T, setStrip: setStrip, setBail: setBail, advance: advance, LINE: LINE, bailPivot: bailPivot, root: root, updateLine: updateLine, pieces: pieces, camera: camera, lineGroup: lineGroup,
+  view: function (th, ph, rr, at) { goal.theta = th; goal.phi = ph; if (rr) goal.r = rr; if (at) goal.target.fromArray(at); snap(); applyCamera(); } };
 })();
 </script>
 <!--page:body-end-->
