@@ -26,6 +26,10 @@
   --accent-ink: #ffffff;
   --accent-soft: rgba(8, 127, 120, .12);
   --egi: #cf4f17;
+  --viz-pull: #2a78d6;
+  --viz-drag: #008a7e;
+  --viz-slip: #cf4f17;
+  --viz-grid: rgba(16, 32, 38, .1);
   --pin-bg: #102026;
   --halo: #eef4f4;
   --pin-ink: #fafcfc;
@@ -43,6 +47,7 @@
     --ink: #e8f1f2; --muted: #9db2b7; --line: rgba(232, 241, 242, .14);
     --accent: #2fd0c4; --accent-ink: #032321; --accent-soft: rgba(47, 208, 196, .14);
     --egi: #ff8a4c;
+    --viz-pull: #3987e5; --viz-drag: #1fa198; --viz-slip: #d95926; --viz-grid: rgba(232, 241, 242, .1);
     --pin-bg: #e8f1f2; --pin-ink: #0b171c; --halo: #07131a;
     color-scheme: dark;
   }
@@ -54,6 +59,7 @@
   --ink: #e8f1f2; --muted: #9db2b7; --line: rgba(232, 241, 242, .14);
   --accent: #2fd0c4; --accent-ink: #032321; --accent-soft: rgba(47, 208, 196, .14);
   --egi: #ff8a4c;
+  --viz-pull: #3987e5; --viz-drag: #1fa198; --viz-slip: #d95926; --viz-grid: rgba(232, 241, 242, .1);
   --pin-bg: #e8f1f2; --pin-ink: #0b171c; --halo: #07131a;
   color-scheme: dark;
 }
@@ -155,6 +161,34 @@ h1 small { display: block; font: 500 14px/1.3 var(--font-mono); letter-spacing: 
 .chip:hover { border-color: var(--accent); }
 .chip .n { width: 19px; height: 19px; border-radius: 50%; display: grid; place-items: center; background: var(--pin-bg); color: var(--pin-ink); font: 600 11px/1 var(--font-display); }
 .stepnav { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 6px; margin-top: 14px; }
+.stepnav.one { grid-template-columns: 1fr; }
+.detail { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+.panel.demo .parts, .panel.demo .controls { display: none; }   /* the demo card has its own controls and Exit */
+.row .btn:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.dg-set { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.dg-set label { flex: none; width: 46px; font: 600 13px/1 var(--font-display); letter-spacing: .08em; text-transform: uppercase; }
+.dg-set input { flex: 1; min-width: 0; accent-color: var(--viz-drag); }
+.dg-set output { flex: none; min-width: 112px; text-align: right; font: 500 14px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.detail p.dg-hint, .detail p.dg-note { margin-top: 6px; font-size: 12.5px; line-height: 1.4; }
+.dg-fish { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px; }
+.dg-actions { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 6px; margin-top: 6px; }
+.dg-read { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+.dg-read span { display: block; font: 600 11px/1 var(--font-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.dg-read b { display: block; margin-top: 6px; font: 500 17px/1.1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.dg-read b.st { display: inline-flex; align-items: center; gap: 6px; font: 700 13px/1 var(--font-display); letter-spacing: .08em; text-transform: uppercase; }
+.st::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--viz-drag); }
+.st.slip::before { border-radius: 1px; transform: rotate(45deg); background: var(--viz-slip); }
+.dg-chart { position: relative; margin: 14px 0 0; }
+.dg-chart canvas { display: block; width: 100%; height: 108px; touch-action: none; }
+.dg-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-size: 12px; color: var(--muted); }
+.dg-legend i { display: inline-block; width: 14px; height: 2px; margin-right: 6px; vertical-align: middle; border-radius: 1px; }
+.dg-legend .k-pull { background: var(--viz-pull); }
+.dg-legend .k-drag { background: var(--viz-drag); }
+.dg-legend .k-slip { height: 8px; background: color-mix(in srgb, var(--viz-slip) 22%, transparent); box-shadow: inset 0 2px 0 var(--viz-slip); }
+.dg-tip { position: absolute; top: 0; left: 0; pointer-events: none; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line);
+  background: var(--surface-solid); font-size: 12px; line-height: 1.35; white-space: nowrap; box-shadow: 0 4px 14px rgba(0, 0, 0, .12); }
+.dg-tip b { font: 500 14px/1.2 var(--font-mono); color: var(--ink); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .btn:disabled, .slider input:disabled { opacity: .4; cursor: not-allowed; }
 .detail p.sel { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 14px; }
 .detail p.sel b { color: var(--ink); }
@@ -272,6 +306,7 @@ h1 small { display: block; font: 500 14px/1.3 var(--font-mono); letter-spacing: 
 
   <aside class="panel" id="panel" aria-label="Reel parts">
     <section class="detail" id="detail" aria-live="polite"></section>
+    <p class="sr-only" id="dg-live" aria-live="polite"></p>
     <ul class="parts" id="parts"></ul>
     <div class="controls">
       <div class="row">
@@ -281,6 +316,7 @@ h1 small { display: block; font: 500 14px/1.3 var(--font-mono); letter-spacing: 
         <button class="btn" id="btn-pins" type="button" aria-pressed="true">Labels</button>
         <button class="btn" id="btn-bail" type="button" aria-pressed="false">Open bail</button>
         <button class="btn" id="btn-strip" type="button" aria-pressed="false">Strip down</button>
+        <button class="btn" id="btn-drag" type="button" aria-pressed="false">Drag demo</button>
       </div>
       <div class="slider">
         <label for="explode">Explode</label>
@@ -590,16 +626,18 @@ var handleSpin = new T.Group(); handleSpin.position.set(GX, GY, 0); root.add(han
 /* --- Spool and drag ---------------------------------------------------- */
 var FELT = 'Soaked in drag grease, it slips against the metal washers on either side. That controlled slip is the drag.';
 var g, i;
-g = def('dragKnob', osc, { n: 'Drag knob', g: 'spool', shell: true, ex: [21.1, 0, 0], pin: [6.12, 1.3, 0.45],
+g = def('dragKnob', osc, { n: 'Drag knob', g: 'spool', shell: true, ex: [21.1, 0, 0], pin: [6.26, 1.3, 0.45],
   t: 'A full-width I-beam bar on a black ringed face. It screws onto the tip of the main shaft and presses on the washer stack inside the spool: more turns, more pressure, more drag. The long bar gives plenty of grip for fine changes with wet fingers.',
   f: [['Max drag', '10 kg']] });
 (function () {
   // black face filling the spool cup, with fine concentric rings
-  var face = [[5.5, 0.6], [5.5, 1.25], [5.6, 1.3], [5.63, 2.08], [5.66, 2.12], [5.7, 2.1]];
-  for (var r = 2.0; r > 0.42; r -= 0.13) face.push([5.7, r], [5.725, r - 0.03], [5.725, r - 0.07], [5.7, r - 0.1]);
-  face.push([5.7, 0.4], [5.72, 0.36], [5.72, 0]);
+  // a narrow boss on the underside passes inside the retainer clip and presses on the top washer
+  // the face plate stands 1.5 mm proud of the spool, so it clears it even with the knob screwed fully in
+  var face = [[5.42, 0.6], [5.42, 0.95], [5.47, 1.0], [5.57, 1.05], [5.76, 1.32], [5.77, 2.08], [5.8, 2.12], [5.84, 2.1]];
+  for (var r = 2.0; r > 0.42; r -= 0.13) face.push([5.84, r], [5.865, r - 0.03], [5.865, r - 0.07], [5.84, r - 0.1]);
+  face.push([5.84, 0.4], [5.86, 0.36], [5.86, 0]);
   mesh(g, latheX(face, 160), MAT.black());
-  mesh(g, torusX(1.62, 0.028, 5.73), MAT.silver());                         // fine silver ring on the face
+  mesh(g, torusX(1.62, 0.028, 5.87), MAT.silver());                         // fine silver ring on the face
   // the bar: flared T-ends, a slim waist, running almost across the spool
   var half = [[1.9, 0.5], [1.8, 0.52], [1.68, 0.4], [1.5, 0.2], [1.2, 0.15], [0.6, 0.13], [0.42, 0.2]];
   var outline = [];
@@ -608,15 +646,15 @@ g = def('dragKnob', osc, { n: 'Drag knob', g: 'spool', shell: true, ex: [21.1, 0
   half.forEach(function (q) { outline.push([-q[1], -q[0]]); });
   half.slice().reverse().forEach(function (q) { outline.push([-q[1], q[0]]); });
   var bar = extrude(poly(outline), 0.22, 0.07, 50);
-  bar.rotateY(Math.PI / 2); bar.translate(5.92, 0, 0);
+  bar.rotateY(Math.PI / 2); bar.translate(6.06, 0, 0);
   mesh(g, bar, MAT.silver());
   // raised spine along the bar
   var spine = extrude(poly([[0.05, 1.86], [0.05, -1.86], [-0.05, -1.86], [-0.05, 1.86]]), 0.08, 0.035, 30);
-  spine.rotateY(Math.PI / 2); spine.translate(6.07, 0, 0);
+  spine.rotateY(Math.PI / 2); spine.translate(6.21, 0, 0);
   mesh(g, spine, MAT.silver());
   // centre hub: black badge in a polished rim
-  mesh(g, latheX(curve([[5.95, 0.46], [6.02, 0.46], [6.1, 0.42], [6.13, 0.36], [6.13, 0]], 30), 96), MAT.silver());
-  mesh(g, cylX(0.33, 6.12, 6.15, 64), MAT.black());
+  mesh(g, latheX(curve([[6.09, 0.46], [6.16, 0.46], [6.24, 0.42], [6.27, 0.36], [6.27, 0]], 30), 96), MAT.silver());
+  mesh(g, cylX(0.33, 6.26, 6.29, 64), MAT.black());
 })();
 
 g = def('dragSeal', osc, { n: 'Drag knob seal', g: 'spool', inside: true, ex: [20.35, 0, 0], pin: [5.56, 1.08, 0],
@@ -1024,7 +1062,7 @@ var pack = (function () {     // the line already wound on the spool
   P.spool.g.add(m); return m;
 })();
 function packRadius() { return Math.sqrt(LINE.r0 * LINE.r0 + (LINE.m / LINE.cap) * (LINE.rFull * LINE.rFull - LINE.r0 * LINE.r0)); }
-var yAxis = new T.Vector3(0, 1, 0), va = new T.Vector3(), vb = new T.Vector3(), vd = new T.Vector3();
+var vOut = new T.Vector3(), yAxis = new T.Vector3(0, 1, 0), va = new T.Vector3(), vb = new T.Vector3(), vd = new T.Vector3();
 function placeSeg(m, a, b, r) {
   vd.subVectors(b, a); var len = vd.length() || 1e-4;
   m.position.addVectors(a, b).multiplyScalar(0.5);
@@ -1100,6 +1138,42 @@ ORDER.forEach(function (id) {
   p.sx = STRIP_EX[id] ? new T.Vector3().fromArray(STRIP_EX[id]) : p.ex.clone().multiplyScalar(0.55);
 });
 
+/* ------------------------------------------------------------- drag demo */
+// The drag is a clutch: keyed washers locked to the shaft, an eared washer that turns with the spool
+// and greased felts between them. The knob squeezes the stack; the harder it squeezes, the harder a fish
+// has to pull before the spool slips and gives line. The fish pulls and line speeds are illustrative.
+var FISH = {
+  squid:    { name: 'Squid',     bursts: [[0.3, 1.0, 1.1], [1.9, 1.3, 1.25], [3.7, 0.8, 0.9], [5.0, 0.9, 0.7]] },
+  bigsquid: { name: 'Big squid', bursts: [[0.3, 1.2, 2.3], [2.0, 1.5, 2.6], [4.0, 1.0, 1.9], [5.4, 0.9, 1.3]] },
+  bass:     { name: 'Sea bass',  bursts: [[0.2, 1.6, 4.4], [2.3, 1.2, 5.0], [4.0, 1.5, 3.9], [5.8, 1.0, 2.4]] }
+};
+Object.keys(FISH).forEach(function (k) {
+  var f = FISH[k]; f.end = 0; f.peak = 0;
+  f.bursts.forEach(function (b) { f.end = Math.max(f.end, b[0] + b[1]); f.peak = Math.max(f.peak, b[2]); });
+  f.end += 0.6;
+});
+function fishPull(f, t) {     // surges with a small twitch on top, as the fish turns and kicks
+  var v = 0.15;
+  f.bursts.forEach(function (b) { var u = (t - b[0]) / b[1]; if (u > 0 && u < 1) v += b[2] * Math.pow(Math.sin(Math.PI * u), 1.5); });
+  return Math.max(0, v * (1 + 0.04 * Math.sin(t * 23) + 0.03 * Math.sin(t * 61)));
+}
+var DRAG = { kg: 1.0, fish: 'bigsquid', run: false, t: 0, v: 0, pull: 0, out: 0, slipT: 0, peak: 0, hist: [],
+             spool: 0, look: false, sound: true, slipping: null, hoverT: null, lastDraw: 0, end: 0 };
+var DRAG_TEETH = 18;        // teeth on the click wheel: one click each
+// how far each washer and the knob move in (cm) when the stack is squeezed fully at 10 kg
+var DRAG_SHIFT = { wKey: -0.025, felt2: -0.035, wEar: -0.06, felt1: -0.075, wTop: -0.1, dragKnob: -0.1, dragSeal: -0.1 };
+['felt1', 'felt2', 'felt3'].forEach(function (id) {   // let each felt squash from its lower face
+  var m = P[id].meshes[0]; m.geometry.computeBoundingBox();
+  var x0 = m.geometry.boundingBox.min.x; m.geometry.translate(-x0, 0, 0); m.position.x += x0;
+});
+function applyDrag() {
+  var c = DRAG.kg / 10;
+  ORDER.forEach(function (id) { P[id].dragShift = (DRAG_SHIFT[id] || 0) * c; });
+  ['felt1', 'felt2', 'felt3'].forEach(function (id) { P[id].meshes[0].scale.x = 1 - 0.3 * c; });
+  P.dragKnob.g.rotation.x = -(DRAG.kg - 1) / 10 * 3 * Math.PI * 2;   // about three turns from loose to locked
+}
+function turnSpool() { P.spool.g.rotation.x = DRAG.spool; P.wEar.g.rotation.x = DRAG.spool; }
+
 /* ---------------------------------------------------------------- camera */
 var cur = { target: new T.Vector3(), r: 30, theta: 2.84, phi: 1.44 };
 var goal = { target: new T.Vector3(), r: 30, theta: 2.84, phi: 1.44 };
@@ -1172,7 +1246,7 @@ function resize() {
 /* ------------------------------------------------------------ interaction */
 var raycaster = new T.Raycaster(), ndc = new T.Vector2();
 var state = { selected: null, hover: null, xray: false, spin: false, pins: true, explode: 0, angle: 0, speed: 0.5,
-              cut: 0, bail: 0, bailTarget: 0, strip: -1, slack: 0 };
+              cut: 0, bail: 0, bailTarget: 0, strip: -1, slack: 0, demo: false };
 function isAssembled() { for (var k = 0; k < ORDER.length; k++) if (P[ORDER[k]].out > 0.01) return false; return true; }
 
 function visibleHit(h) {
@@ -1230,15 +1304,40 @@ function stripCard() {
   }
   return html;
 }
+function dragCard() {
+  var html = '<p class="kicker">Drag demo</p><h2>Set the drag, let a fish run</h2>' +
+    '<p class="lead">The drag is a clutch inside the spool. When a fish pulls harder than the setting, the spool slips and gives line instead of the braid snapping.</p>' +
+    '<div class="dg-set"><label for="drag-kg">Drag</label><input id="drag-kg" type="range" min="0.2" max="10" step="0.1" value="' + DRAG.kg + '"><output id="drag-out" for="drag-kg"></output></div>' +
+    '<p class="dg-hint">Turning the knob squeezes the washer stack. A common rule is to set the drag to about a quarter to a third of the line’s breaking strain.</p>' +
+    '<div class="dg-fish" role="group" aria-label="Fish">' + Object.keys(FISH).map(function (k) {
+      return '<button type="button" class="btn" data-fish="' + k + '" aria-pressed="' + (k === DRAG.fish) + '">' + esc(FISH[k].name) + '</button>';
+    }).join('') + '</div>' +
+    '<div class="dg-actions"><button type="button" class="btn" data-dg="go" aria-pressed="true">Fish pulls</button>' +
+    '<button type="button" class="btn" data-dg="look" aria-pressed="' + DRAG.look + '">Look inside</button>' +
+    '<button type="button" class="btn" data-dg="sound" aria-pressed="' + DRAG.sound + '">Clicks</button></div>' +
+    '<div class="dg-read"><div><span id="dg-pull-l">Pull</span><b id="dg-pull">–</b></div><div><span>Spool</span><b id="dg-status" class="st">Holding</b></div><div><span>Line out</span><b id="dg-out">0.0 m</b></div></div>' +
+    '<figure class="dg-chart"><canvas id="dg-canvas" role="img" aria-label="Fish pull against the drag setting. Press Fish pulls to start."></canvas><div class="dg-tip" id="dg-tip" hidden></div>' +
+    '<figcaption class="dg-legend"><span><i class="k-pull"></i>Fish pull</span><span><i class="k-drag"></i>Drag setting</span><span><i class="k-slip"></i>Spool slipping</span></figcaption></figure>' +
+    '<p class="dg-note">The pulls are illustrative, not measured.</p>' +
+    '<div class="stepnav one"><button class="btn" type="button" data-dg="exit">Exit drag demo</button></div>';
+  if (state.selected) {
+    var d = INFO[state.selected];
+    html += '<p class="sel"><b>' + esc(d.name) + '.</b> ' + esc(d.text) + '</p>';
+  }
+  return html;
+}
 function renderDetail() {
   var id = state.selected;
-  if (state.strip >= 0) {
+  if (state.demo) {
+    detail.innerHTML = dragCard();
+    updateDragReadouts(); drawDragChart();
+  } else if (state.strip >= 0) {
     detail.innerHTML = stripCard();
   } else if (!id) {
     detail.innerHTML = '<p class="kicker">Explore</p><h2>Pick a part</h2>' +
       '<p class="lead">Click any part of the reel or choose one below and the camera flies in. Slide Explode to pull all ' + ORDER.length + ' parts apart like a parts diagram.</p>' +
       '<p>Scroll or pinch to zoom toward the pointer. Drag to orbit. Right-drag or two-finger drag to pan. Drag the handle or its knob to wind the reel by hand.</p>' +
-      '<p>The line is multicolour braid that changes colour every 5 m. The white arrows on it point the way it travels as you wind, slowed down so you can follow them. Cut slices the reel open along the spool, and Strip down takes it apart step by step.</p>';
+      '<p>The line is multicolour braid that changes colour every 5 m. The white arrows on it point the way it travels as you wind, slowed down so you can follow them. Cut slices the reel open along the spool, Strip down takes it apart step by step, and Drag demo lets a fish pull against the drag.</p>';
   } else {
     var d = INFO[id];
     detail.innerHTML = '<p class="kicker">No. ' + (ORDER.indexOf(id) + 1) + ' &middot; ' + esc(GROUPS[d.group].label) + '</p><h2>' + esc(d.name) + '</h2><p class="lead">' + esc(d.text) + '</p>' +
@@ -1460,6 +1559,7 @@ function setStrip(k) {
   state.strip = k;
   document.getElementById('btn-strip').setAttribute('aria-pressed', String(k >= 0));
   if (k >= 0) {
+    if (state.demo) setDemo(false);
     if (was < 0) { setSpin(false); setBail(false); explodeInput.value = 0; state.explode = 0; explodeInput.disabled = true; select(null); }
   } else {
     explodeInput.disabled = false;
@@ -1490,6 +1590,209 @@ function frameStrip() {
   goal.theta = nearestAngle(v[0], cur.theta); goal.phi = v[1];
 }
 document.getElementById('btn-strip').addEventListener('click', function () { setStrip(state.strip >= 0 ? -1 : 0); });
+
+function setDemo(on) {
+  state.demo = on;
+  document.getElementById('btn-drag').setAttribute('aria-pressed', String(on));
+  document.getElementById('panel').classList.toggle('demo', on);
+  detail.setAttribute('aria-live', on ? 'off' : 'polite');      // live numbers must not flood a screen reader
+  if (on) {
+    if (state.strip >= 0) setStrip(-1);
+    setBail(false);
+    explodeInput.value = 0; state.explode = 0; applyExplode(); syncPins();
+    state.selected = null; paint();
+    frameDemo();
+  } else {
+    DRAG.run = false; DRAG.v = 0;
+    if (DRAG.look) setLook(false);
+  }
+  renderDetail(); syncPins(); resizeSoon();
+}
+document.getElementById('btn-drag').addEventListener('click', function () { var on = !state.demo; setDemo(on); if (!on) goHome(); });
+function frameParts(ids, th, ph, k) {
+  var b = new T.Box3();
+  ids.forEach(function (id) { P[id].meshes.forEach(function (m) { b.expandByObject(m); }); });
+  b.getBoundingSphere(sph);
+  goal.target.copy(sph.center); goal.r = Math.max(2.5, Math.min(R_MAX, fitRadius(sph.radius * k)));
+  goal.theta = nearestAngle(th, cur.theta); goal.phi = ph;
+}
+function frameDemo() { frameParts(['spool', 'rotor', 'roller', 'dragKnob'], 2.62, 1.38, 1.15); }
+function setLook(on) {
+  DRAG.look = on;
+  state.cut = on ? 1 : 0; document.getElementById('cut').value = on ? 100 : 0; cutPlane.constant = -cutZ(); syncPins();
+  if (on) frameParts(['wTop', 'felt1', 'wEar', 'felt2', 'wKey', 'felt3', 'dragKnob'], 2.55, 1.4, 1.18);
+  else frameDemo();
+  var b = detail.querySelector('[data-dg="look"]'); if (b) b.setAttribute('aria-pressed', String(on));
+}
+function startRun() {
+  if (!isAssembled()) return;
+  setBail(false); ensureAudio();
+  try { if (audio && audio.state === 'suspended') audio.resume(); } catch (e) {}
+  DRAG.run = true; DRAG.t = 0; DRAG.v = 0; DRAG.out = 0; DRAG.slipT = 0; DRAG.peak = 0; DRAG.hist = []; DRAG.slipping = null;
+  DRAG.end = FISH[DRAG.fish].end;
+}
+detail.addEventListener('click', function (e) {
+  var f = e.target.closest('[data-fish]');
+  if (f) {
+    DRAG.fish = f.dataset.fish; DRAG.run = false; DRAG.v = 0; DRAG.hist = []; DRAG.out = 0;
+    Array.prototype.forEach.call(detail.querySelectorAll('[data-fish]'), function (b) { b.setAttribute('aria-pressed', String(b === f)); });
+    updateDragReadouts(); drawDragChart(); return;
+  }
+  var b = e.target.closest('[data-dg]'); if (!b) return;
+  var v = b.dataset.dg;
+  if (v === 'go') startRun();
+  else if (v === 'look') setLook(!DRAG.look);
+  else if (v === 'sound') { DRAG.sound = !DRAG.sound; b.setAttribute('aria-pressed', String(DRAG.sound)); }
+  else if (v === 'exit') { setDemo(false); goHome(); }
+});
+detail.addEventListener('input', function (e) {
+  if (e.target.id !== 'drag-kg') return;
+  DRAG.kg = +e.target.value; applyDrag(); applyExplode(); updateDragReadouts(); drawDragChart();
+});
+
+// One step of the fight: the fish pulls; whatever the drag cannot hold turns the spool backwards
+function dragStep(dt) {
+  var f = FISH[DRAG.fish];
+  DRAG.t += dt;
+  var F = DRAG.t < f.end ? fishPull(f, DRAG.t) : 0;
+  var target = Math.max(0, Math.min(4.5, (F - DRAG.kg) * 1.8));      // m/s of line given
+  DRAG.v += (target - DRAG.v) * (1 - Math.exp(-dt / 0.08));
+  if (target === 0 && DRAG.v < 0.01) DRAG.v = 0;
+  DRAG.pull = F; DRAG.peak = Math.max(DRAG.peak, F);
+  var dm = Math.min(DRAG.v * dt, LINE.m);
+  if (dm > 0) {
+    LINE.m -= dm; DRAG.out += dm; DRAG.slipT += dt;
+    LINE.phase -= Math.min(0.3, dm * 100 * 0.12 / (TAG_SPAN / TAGS));
+    var turn = dm * 100 / packRadius();
+    DRAG.spool += turn; turnSpool();
+    clicks(DRAG_TEETH * turn / (Math.PI * 2), dt);
+  }
+  if (DRAG.t <= f.end) DRAG.hist.push([DRAG.t, F]);
+  var slipping = DRAG.v > 0.02;
+  if (slipping !== DRAG.slipping) { DRAG.slipping = slipping; say(slipping ? 'Spool slipping' : 'Spool holding'); }
+  if (DRAG.t > f.end && DRAG.v === 0) {
+    DRAG.run = false;
+    var sum = 'Peak pull ' + DRAG.peak.toFixed(1) + ' kg against a ' + DRAG.kg.toFixed(1) + ' kg drag. ' +
+      (DRAG.out > 0 ? 'The spool slipped for ' + DRAG.slipT.toFixed(1) + ' s and gave ' + DRAG.out.toFixed(1) + ' m of line.' : 'The drag held: no line given.');
+    say(sum);
+    var cv = document.getElementById('dg-canvas'); if (cv) cv.setAttribute('aria-label', 'Fish pull against the drag setting over the run. ' + sum);
+    updateDragReadouts(); drawDragChart();
+  }
+}
+function say(text) { var l = document.getElementById('dg-live'); if (l) l.textContent = text; }
+function updateDragReadouts() {
+  var o = document.getElementById('drag-out'); if (!o) return;
+  o.textContent = DRAG.kg.toFixed(1) + ' kg · ' + (DRAG.kg * 2.2046).toFixed(1) + ' lb';
+  var done = !DRAG.run && DRAG.hist.length > 0;
+  document.getElementById('dg-pull-l').textContent = done ? 'Peak pull' : 'Pull';
+  document.getElementById('dg-pull').textContent = DRAG.hist.length ? (done ? DRAG.peak : DRAG.pull).toFixed(1) + ' kg' : '–';
+  var st = document.getElementById('dg-status'), sl = DRAG.v > 0.02;
+  st.textContent = sl ? 'Slipping' : 'Holding'; st.className = 'st' + (sl ? ' slip' : '');
+  document.getElementById('dg-out').textContent = DRAG.out.toFixed(1) + ' m';
+}
+
+// Drag clicks: a short filtered tick per click-wheel tooth, at most 45 a second
+var audio = null, clickBuf = null, clickOut = null, clickAcc = 0;
+function ensureAudio() {
+  if (audio) return;
+  try {
+    var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    audio = new AC();
+    var n = Math.floor(audio.sampleRate * 0.005);
+    clickBuf = audio.createBuffer(1, n, audio.sampleRate);
+    var ch = clickBuf.getChannelData(0);
+    for (var i = 0; i < n; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 4);
+    var g = audio.createGain(); g.gain.value = 0.35;
+    var hp = audio.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800;
+    g.connect(hp); hp.connect(audio.destination); clickOut = g;
+  } catch (e) { audio = null; }
+}
+function clicks(n, dt) {
+  if (!audio || !DRAG.sound) return;
+  clickAcc += Math.min(n, 45 * dt);
+  try {
+    var t0 = audio.currentTime;
+    while (clickAcc >= 1) {
+      clickAcc -= 1;
+      var src = audio.createBufferSource(); src.buffer = clickBuf; src.playbackRate.value = 0.9 + Math.random() * 0.25;
+      src.connect(clickOut); src.start(t0 + Math.random() * dt);
+    }
+  } catch (e) {}
+}
+
+// Chart: the fish's pull over the run, the drag setting as a threshold, and a wash where the spool slips
+function niceMax(v) { var s = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15]; for (var i = 0; i < s.length; i++) if (s[i] >= v) return s[i]; return Math.ceil(v); }
+function drawDragChart() {
+  var cv = document.getElementById('dg-canvas'); if (!cv) return;
+  var w = cv.clientWidth, h = cv.clientHeight; if (!w || !h) return;
+  var dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  var css = getComputedStyle(document.documentElement), col = function (n) { return css.getPropertyValue(n).trim(); };
+  var c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
+  var f = FISH[DRAG.fish], T0 = f.end, ymax = niceMax(Math.max(f.peak * 1.1, DRAG.kg * 1.15, 1));
+  var L = 26, R = 70, Tp = 16, B = 18;
+  var X = function (t) { return L + t / T0 * (w - L - R); }, Y = function (v) { return Tp + (1 - Math.min(v, ymax) / ymax) * (h - Tp - B); };
+  c.font = '500 10px ' + col('--font-mono'); c.textBaseline = 'middle';
+  // recessive hairline grid with clean ticks
+  c.strokeStyle = col('--viz-grid'); c.lineWidth = 1; c.fillStyle = col('--muted');
+  [0, ymax / 2, ymax].forEach(function (v) {
+    var y = Math.round(Y(v)) + 0.5; c.beginPath(); c.moveTo(L, y); c.lineTo(w - R, y); c.stroke();
+    c.textAlign = 'right'; c.fillText(v % 1 ? v.toFixed(1) : String(v), L - 5, y);
+  });
+  c.textAlign = 'left'; c.fillText('kg', 2, 6);
+  c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+  [0, Math.round(T0 / 2), Math.floor(T0)].forEach(function (t) { c.fillText(t + ' s', X(t), h - 4); });
+  var hist = DRAG.hist, yD = Y(DRAG.kg);
+  // slipping wash: between the pull and the drag line wherever the pull is above it
+  if (hist.length > 1) {
+    c.fillStyle = col('--viz-slip'); c.globalAlpha = 0.16; c.beginPath();
+    for (var i = 1; i < hist.length; i++) {
+      var a = hist[i - 1], b = hist[i];
+      if (a[1] > DRAG.kg || b[1] > DRAG.kg) {
+        c.moveTo(X(a[0]), yD); c.lineTo(X(a[0]), Math.min(yD, Y(a[1]))); c.lineTo(X(b[0]), Math.min(yD, Y(b[1]))); c.lineTo(X(b[0]), yD); c.closePath();
+      }
+    }
+    c.fill(); c.globalAlpha = 1;
+  }
+  // drag setting: a threshold line, labelled at its end
+  c.strokeStyle = col('--viz-drag'); c.lineWidth = 2; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(L, yD); c.lineTo(w - R, yD); c.stroke();
+  c.fillStyle = col('--ink'); c.textAlign = 'left'; c.textBaseline = 'middle';
+  c.font = '500 11px ' + col('--font-mono'); c.fillText(DRAG.kg.toFixed(1) + ' kg', w - R + 8, yD);
+  // the pull
+  if (hist.length > 1) {
+    c.strokeStyle = col('--viz-pull'); c.lineWidth = 2; c.lineJoin = 'round'; c.beginPath();
+    hist.forEach(function (p, k) { if (k) c.lineTo(X(p[0]), Y(p[1])); else c.moveTo(X(p[0]), Y(p[1])); });
+    c.stroke();
+    var e = hist[hist.length - 1];                                   // end dot with a surface ring
+    c.fillStyle = col('--surface-solid'); c.beginPath(); c.arc(X(e[0]), Y(e[1]), 6, 0, Math.PI * 2); c.fill();
+    c.fillStyle = col('--viz-pull'); c.beginPath(); c.arc(X(e[0]), Y(e[1]), 4, 0, Math.PI * 2); c.fill();
+  } else {
+    c.fillStyle = col('--muted'); c.textAlign = 'center'; c.font = '500 12px ' + col('--font-body');
+    var ph = h - Tp - B;                                             // keep the hint clear of the drag line
+    c.fillText('Press Fish pulls to start', (L + w - R) / 2, Tp + ph * (yD < Tp + ph / 2 ? 0.74 : 0.3));
+  }
+  // hover crosshair snapped to the nearest sample
+  var tip = document.getElementById('dg-tip');
+  if (DRAG.hoverT !== null && hist.length) {
+    var best = hist[0];
+    hist.forEach(function (p) { if (Math.abs(p[0] - DRAG.hoverT) < Math.abs(best[0] - DRAG.hoverT)) best = p; });
+    var hx = Math.round(X(best[0])) + 0.5;
+    c.strokeStyle = col('--muted'); c.globalAlpha = 0.6; c.lineWidth = 1; c.beginPath(); c.moveTo(hx, Tp); c.lineTo(hx, h - B); c.stroke(); c.globalAlpha = 1;
+    tip.hidden = false; tip.textContent = '';
+    var bv = document.createElement('b'); bv.textContent = best[1].toFixed(1) + ' kg'; tip.appendChild(bv);
+    tip.appendChild(document.createTextNode(' pull at ' + best[0].toFixed(1) + ' s'));
+    tip.appendChild(document.createElement('br'));
+    tip.appendChild(document.createTextNode(best[1] > DRAG.kg ? 'Above the ' + DRAG.kg.toFixed(1) + ' kg drag: slipping' : 'Under the ' + DRAG.kg.toFixed(1) + ' kg drag: holding'));
+    var tx = Math.min(Math.max(hx + 10, 0), w - tip.offsetWidth); tip.style.transform = 'translate(' + tx + 'px,' + (Tp - 4) + 'px)';
+  } else if (tip) tip.hidden = true;
+}
+detail.addEventListener('pointermove', function (e) {
+  if (e.target.id !== 'dg-canvas' || !DRAG.hist.length) return;
+  var r = e.target.getBoundingClientRect(), f = FISH[DRAG.fish];
+  DRAG.hoverT = Math.max(0, Math.min(f.end, (e.clientX - r.left - 26) / (r.width - 96) * f.end)); drawDragChart();
+});
+detail.addEventListener('pointerout', function (e) { if (e.target.id === 'dg-canvas' && DRAG.hoverT !== null) { DRAG.hoverT = null; drawDragChart(); } });
 document.getElementById('btn-spin').addEventListener('click', function () { setSpin(!state.spin); });
 document.getElementById('btn-xray').addEventListener('click', function () { setXray(!state.xray); });
 (function () {
@@ -1517,6 +1820,7 @@ function applyExplode() {
   ORDER.forEach(function (id) {
     var p = P[id], s = p.st * p.st * (3 - 2 * p.st);
     p.g.position.copy(p.base).addScaledVector(p.ex, t).addScaledVector(p.sx, s);
+    p.g.position.x += p.dragShift || 0;
     p.out = Math.max(t, s);
   });
   axes.children.forEach(function (l) { l.material.opacity = t * 0.55; });
@@ -1589,7 +1893,7 @@ function updateLine() {
     var tg = tags[k], f = ((k + LINE.phase) % TAGS + TAGS) % TAGS / TAGS;
     tg.visible = !open;
     tg.position.copy(pRoll).addScaledVector(vd, -(1 - f) * len);
-    tg.quaternion.setFromUnitVectors(yAxis, vd);
+    tg.quaternion.setFromUnitVectors(yAxis, DRAG.v > 0.02 ? vOut.copy(vd).negate() : vd);   // out toward the rod while the drag gives line
     var sc = Math.max(0.001, Math.min(1, f * TAGS * 0.8, (1 - f) * TAGS * 0.8));
     tg.scale.setScalar(sc);
   }
@@ -1626,6 +1930,8 @@ var last = performance.now();
 function frame(now) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (state.spin && !crank && isAssembled()) advance(dt * Math.PI * 2 * state.speed);
+  if (DRAG.run) dragStep(dt);
+  if (state.demo && (DRAG.run || DRAG.v) && now - DRAG.lastDraw > 33) { DRAG.lastDraw = now; updateDragReadouts(); drawDragChart(); }
   var slackTo = state.bail > 0.5 ? 1 : 0;
   if (state.slack !== slackTo) state.slack = reduceMotion ? slackTo : Math.max(0, Math.min(1, state.slack + Math.sign(slackTo - state.slack) * dt / (slackTo ? 0.9 : 0.25)));
   if (state.bail !== state.bailTarget) {
@@ -1649,10 +1955,10 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 
-pose(); applyExplode(); renderDetail(); syncPins(); paint();
+pose(); applyDrag(); applyExplode(); renderDetail(); syncPins(); paint();
 resize(); goHome(true); applyCamera();
 requestAnimationFrame(frame);
-window.__reel = { select: select, state: state, setXray: setXray, snap: snap, pose: pose, parts: P, three: T, setStrip: setStrip, setBail: setBail, advance: advance, LINE: LINE, bailPivot: bailPivot, root: root, updateLine: updateLine, pieces: pieces, camera: camera, lineGroup: lineGroup,
+window.__reel = { select: select, state: state, setXray: setXray, snap: snap, pose: pose, parts: P, three: T, setStrip: setStrip, setBail: setBail, advance: advance, LINE: LINE, bailPivot: bailPivot, root: root, updateLine: updateLine, pieces: pieces, camera: camera, lineGroup: lineGroup, DRAG: DRAG, dragStep: dragStep, setDemo: setDemo, applyDrag: applyDrag, startRun: startRun,
   view: function (th, ph, rr, at) { goal.theta = th; goal.phi = ph; if (rr) goal.r = rr; if (at) goal.target.fromArray(at); snap(); applyCamera(); } };
 })();
 </script>

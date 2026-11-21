@@ -17,6 +17,11 @@ Interactive 3D viewers for fishing gear.
   line roller onto the spool, with white arrow tags showing which way it travels. Open bail flips the bail over (turning
   the handle snaps it shut), Cut slices the shell open along the spool, and
   Strip down takes the reel apart in a typical servicing order, step by step.
+  Drag demo sets the drag from 0.2 to 10 kg (the knob turns and the washer
+  stack squeezes), then lets a squid, a big squid or a sea bass run: when the
+  pull beats the drag the spool slips, the clicker ticks and line pays out,
+  with a live chart of pull against the setting. The pulls are illustrative,
+  not measured.
 
 The model is stylised and built from primitives in code (three.js, vendored in
 `vendor/`). It is not manufacturer CAD and proportions are approximate.
