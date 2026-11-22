@@ -22,6 +22,10 @@ Interactive 3D viewers for fishing gear.
   pull beats the drag the spool slips, the clicker ticks and line pays out,
   with a live chart of pull against the setting. The pulls are illustrative,
   not measured.
+  Sound (on by default, and remembered) plays the drag clicker, ticking on a
+  slow slip and buzzing at the click-wheel rate on a fast run while the braid
+  hisses off the spool, and the bail clacking open and shut. Every sound is
+  synthesised in the browser; nothing is downloaded.
 
 The model is stylised and built from primitives in code (three.js, vendored in
 `vendor/`). It is not manufacturer CAD and proportions are approximate.

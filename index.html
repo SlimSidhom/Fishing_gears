@@ -317,6 +317,7 @@ h1 small { display: block; font: 500 14px/1.3 var(--font-mono); letter-spacing: 
         <button class="btn" id="btn-bail" type="button" aria-pressed="false">Open bail</button>
         <button class="btn" id="btn-strip" type="button" aria-pressed="false">Strip down</button>
         <button class="btn" id="btn-drag" type="button" aria-pressed="false">Drag demo</button>
+        <button class="btn" id="btn-sound" type="button" aria-pressed="true">Sound</button>
       </div>
       <div class="slider">
         <label for="explode">Explode</label>
@@ -1158,7 +1159,7 @@ function fishPull(f, t) {     // surges with a small twitch on top, as the fish 
   return Math.max(0, v * (1 + 0.04 * Math.sin(t * 23) + 0.03 * Math.sin(t * 61)));
 }
 var DRAG = { kg: 1.0, fish: 'bigsquid', run: false, t: 0, v: 0, pull: 0, out: 0, slipT: 0, peak: 0, hist: [],
-             spool: 0, look: false, sound: true, slipping: null, hoverT: null, lastDraw: 0, end: 0 };
+             spool: 0, look: false, slipping: null, hoverT: null, lastDraw: 0, end: 0 };
 var DRAG_TEETH = 18;        // teeth on the click wheel: one click each
 // how far each washer and the knob move in (cm) when the stack is squeezed fully at 10 kg
 var DRAG_SHIFT = { wKey: -0.025, felt2: -0.035, wEar: -0.06, felt1: -0.075, wTop: -0.1, dragKnob: -0.1, dragSeal: -0.1 };
@@ -1314,7 +1315,7 @@ function dragCard() {
     }).join('') + '</div>' +
     '<div class="dg-actions"><button type="button" class="btn" data-dg="go" aria-pressed="true">Fish pulls</button>' +
     '<button type="button" class="btn" data-dg="look" aria-pressed="' + DRAG.look + '">Look inside</button>' +
-    '<button type="button" class="btn" data-dg="sound" aria-pressed="' + DRAG.sound + '">Clicks</button></div>' +
+    '<button type="button" class="btn" data-dg="sound" aria-pressed="' + SND.on + '">Sound</button></div>' +
     '<div class="dg-read"><div><span id="dg-pull-l">Pull</span><b id="dg-pull">–</b></div><div><span>Spool</span><b id="dg-status" class="st">Holding</b></div><div><span>Line out</span><b id="dg-out">0.0 m</b></div></div>' +
     '<figure class="dg-chart"><canvas id="dg-canvas" role="img" aria-label="Fish pull against the drag setting. Press Fish pulls to start."></canvas><div class="dg-tip" id="dg-tip" hidden></div>' +
     '<figcaption class="dg-legend"><span><i class="k-pull"></i>Fish pull</span><span><i class="k-drag"></i>Drag setting</span><span><i class="k-slip"></i>Spool slipping</span></figcaption></figure>' +
@@ -1626,8 +1627,7 @@ function setLook(on) {
 }
 function startRun() {
   if (!isAssembled()) return;
-  setBail(false); ensureAudio();
-  try { if (audio && audio.state === 'suspended') audio.resume(); } catch (e) {}
+  setBail(false); soundCtx();
   DRAG.run = true; DRAG.t = 0; DRAG.v = 0; DRAG.out = 0; DRAG.slipT = 0; DRAG.peak = 0; DRAG.hist = []; DRAG.slipping = null;
   DRAG.end = FISH[DRAG.fish].end;
 }
@@ -1642,7 +1642,7 @@ detail.addEventListener('click', function (e) {
   var v = b.dataset.dg;
   if (v === 'go') startRun();
   else if (v === 'look') setLook(!DRAG.look);
-  else if (v === 'sound') { DRAG.sound = !DRAG.sound; b.setAttribute('aria-pressed', String(DRAG.sound)); }
+  else if (v === 'sound') setSound(!SND.on);
   else if (v === 'exit') { setDemo(false); goHome(); }
 });
 detail.addEventListener('input', function (e) {
@@ -1659,14 +1659,14 @@ function dragStep(dt) {
   DRAG.v += (target - DRAG.v) * (1 - Math.exp(-dt / 0.08));
   if (target === 0 && DRAG.v < 0.01) DRAG.v = 0;
   DRAG.pull = F; DRAG.peak = Math.max(DRAG.peak, F);
-  var dm = Math.min(DRAG.v * dt, LINE.m);
+  var dm = Math.min(DRAG.v * dt, LINE.m), turn = 0;
   if (dm > 0) {
     LINE.m -= dm; DRAG.out += dm; DRAG.slipT += dt;
     LINE.phase -= Math.min(0.3, dm * 100 * 0.12 / (TAG_SPAN / TAGS));
-    var turn = dm * 100 / packRadius();
+    turn = dm * 100 / packRadius();
     DRAG.spool += turn; turnSpool();
-    clicks(DRAG_TEETH * turn / (Math.PI * 2), dt);
   }
+  dragSound(DRAG_TEETH * turn / (Math.PI * 2), dt);
   if (DRAG.t <= f.end) DRAG.hist.push([DRAG.t, F]);
   var slipping = DRAG.v > 0.02;
   if (slipping !== DRAG.slipping) { DRAG.slipping = slipping; say(slipping ? 'Spool slipping' : 'Spool holding'); }
@@ -1691,33 +1691,138 @@ function updateDragReadouts() {
   document.getElementById('dg-out').textContent = DRAG.out.toFixed(1) + ' m';
 }
 
-// Drag clicks: a short filtered tick per click-wheel tooth, at most 45 a second
-var audio = null, clickBuf = null, clickOut = null, clickAcc = 0;
-function ensureAudio() {
-  if (audio) return;
-  try {
-    var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-    audio = new AC();
-    var n = Math.floor(audio.sampleRate * 0.005);
-    clickBuf = audio.createBuffer(1, n, audio.sampleRate);
-    var ch = clickBuf.getChannelData(0);
-    for (var i = 0; i < n; i++) ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 4);
-    var g = audio.createGain(); g.gain.value = 0.35;
-    var hp = audio.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800;
-    g.connect(hp); hp.connect(audio.destination); clickOut = g;
-  } catch (e) { audio = null; }
+/* ----------------------------------------------------------------- sound */
+// Every sound is synthesised here, nothing is downloaded. A struck metal part is modelled as a very
+// short burst of noise (the impact) plus the few modes it rings at, each dying away exponentially.
+var SND = { on: true, ctx: null, out: null, clickBus: null, buf: null, drag: null, acc: 0, tooth: 0, idle: 0, count: 0 };
+try { SND.on = localStorage.getItem('reel-sound') !== 'off'; } catch (e) {}
+function soundCtx() {
+  if (!SND.on) return null;
+  if (!SND.ctx) {
+    var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+    try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch (e) {}   // mix with music, obey the silent switch
+    try {
+      var c = new AC(), comp = c.createDynamicsCompressor();
+      comp.threshold.value = -12; comp.knee.value = 8; comp.ratio.value = 3.5; comp.attack.value = 0.003; comp.release.value = 0.15;
+      SND.out = c.createGain(); SND.out.connect(comp); comp.connect(c.destination);
+      var lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 10000; lp.Q.value = 0.7; lp.connect(SND.out);
+      SND.clickBus = c.createGain(); SND.clickBus.gain.value = 0.2; SND.clickBus.connect(lp);
+      SND.buf = makeSounds(c); SND.ctx = c;
+    } catch (e) { SND.ctx = null; return null; }
+  }
+  if (SND.ctx.state !== 'running') { try { var pr = SND.ctx.resume(); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {} }
+  SND.idle = performance.now();
+  return SND.ctx;
 }
-function clicks(n, dt) {
-  if (!audio || !DRAG.sound) return;
-  clickAcc += Math.min(n, 45 * dt);
-  try {
-    var t0 = audio.currentTime;
-    while (clickAcc >= 1) {
-      clickAcc -= 1;
-      var src = audio.createBufferSource(); src.buffer = clickBuf; src.playbackRate.value = 0.9 + Math.random() * 0.25;
-      src.connect(clickOut); src.start(t0 + Math.random() * dt);
+// hits: [start s, level, noise level, noise decay s, [[mode Hz, level, decay s], ...]]
+function strikeBuffer(c, len, hits, seed, level) {
+  var sr = c.sampleRate, n = Math.ceil(len * sr), buf = c.createBuffer(1, n, sr), d = buf.getChannelData(0), r = seed, peak = 0, i;
+  function rnd() { r = (r * 16807) % 2147483647; return r / 1073741823.5 - 1; }
+  hits.forEach(function (h) {
+    for (i = Math.round(h[0] * sr); i < n; i++) {
+      var t = i / sr - h[0], v = h[2] * rnd() * Math.exp(-t / h[3]);
+      for (var k = 0; k < h[4].length; k++) { var m = h[4][k]; v += m[1] * Math.exp(-t / m[2]) * Math.sin(2 * Math.PI * m[0] * t); }
+      d[i] += h[1] * v;
     }
+  });
+  for (i = 0; i < n; i++) peak = Math.max(peak, Math.abs(d[i]));
+  var fade = Math.round(sr * 0.002);
+  for (i = 0; i < n; i++) d[i] = d[i] / peak * level * Math.min(1, (n - i) / fade);
+  return buf;
+}
+function makeSounds(c) {
+  var b = { click: [] };
+  // The drag clicker: a spring pawl in the spool snapping over each tooth of the click wheel. The impact is
+  // bright and very short; the aluminium spool cup rings it out for a few milliseconds. The teeth are stamped
+  // alike, so the clicks match closely and a fast run buzzes at the click rate; the slight tooth-to-tooth
+  // differences leave the faint once-per-turn pattern a real spool has.
+  for (var k = 0; k < DRAG_TEETH; k++) {
+    var j = 1 + 0.006 * Math.sin(k * 2.39 + 0.7);
+    b.click.push(strikeBuffer(c, 0.016, [[0, 1, 0.8, 0.00025, [[2400 * j, 0.55, 0.003], [3650 * j, 0.8, 0.0022], [5300 * j, 0.6, 0.0015], [7900 * j, 0.35, 0.0009]]]],
+      12345, 0.92 + 0.08 * Math.cos(k * 1.71)));
+  }
+  // The bail: the arm swings over its spring and hits the stop. Rotor thump, arm and wire ringing, a faint
+  // ting from the wire. Closing (by hand or tripped by the handle) is snappier and bounces once.
+  b.bailOpen = strikeBuffer(c, 0.14, [[0, 1, 1, 0.001, [[380, 0.6, 0.014], [1150, 0.5, 0.009], [2600, 0.55, 0.006], [4100, 0.4, 0.004], [6500, 0.25, 0.0025], [3300, 0.12, 0.03]]]], 4242, 1);
+  b.bailClose = strikeBuffer(c, 0.14, [[0, 1, 1, 0.0008, [[450, 0.5, 0.012], [1400, 0.5, 0.008], [3000, 0.6, 0.005], [4800, 0.45, 0.003], [7600, 0.3, 0.0018], [3300, 0.14, 0.03]]],
+    [0.009, 0.4, 0.8, 0.0006, [[1400, 0.4, 0.006], [3000, 0.5, 0.004], [4800, 0.4, 0.0025]]]], 777, 1);
+  var n = Math.round(c.sampleRate * 2), d;          // two seconds of noise, looped, for the line hiss
+  b.noise = c.createBuffer(1, n, c.sampleRate); d = b.noise.getChannelData(0);
+  for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+  return b;
+}
+function playBuffer(name, level) {
+  var c = soundCtx(); if (!c) return;
+  var src = c.createBufferSource(), g = c.createGain();
+  src.buffer = SND.buf[name]; g.gain.value = level; src.connect(g); g.connect(SND.out);
+  src.start(c.currentTime); SND.count++;
+}
+function bailSound(open) { playBuffer(open ? 'bailOpen' : 'bailClose', 0.55); }
+// The drag: one click for every click-wheel tooth the pawl rides over, queued just ahead of the audio clock and
+// spread evenly over the frame. A slow slip ticks; a fast run blurs into the familiar buzz, pitched at the click
+// rate (18 teeth a turn: about 600 clicks a second at 4.5 m/s). The pawl strikes harder the faster the spool
+// turns, so the clicks get louder with speed, and the braid hissing off the spool rises with it.
+function dragMix(s) { return { click: 0.16 + 0.26 * Math.sqrt(s), hiss: 0.12 * Math.pow(s, 1.3), freq: 1800 + 3200 * s }; }
+function dragSound(teeth, dt) {
+  var s = Math.min(1, DRAG.v / 4.5);
+  if (!SND.on || (!SND.drag && s === 0)) return;
+  var c = soundCtx(); if (!c) return;
+  var V = SND.drag, now = c.currentTime;
+  if (!V) {
+    var src = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain();
+    src.buffer = SND.buf.noise; src.loop = true;
+    bp.type = 'bandpass'; bp.Q.value = 0.8; bp.frequency.value = 1800; g.gain.value = 0;
+    src.connect(bp); bp.connect(g); g.connect(SND.out); src.start(now);
+    V = SND.drag = { src: src, bp: bp, hiss: g, next: 0 };
+  }
+  var mix = dragMix(s);
+  V.hiss.gain.setTargetAtTime(mix.hiss, now, 0.04);
+  V.bp.frequency.setTargetAtTime(mix.freq, now, 0.04);
+  SND.clickBus.gain.setTargetAtTime(mix.click, now, 0.03);
+  // this frame covers dt of audio from the cursor; a click falls exactly where each tooth is crossed
+  var cur = V.next; if (cur < now + 0.015 || cur > now + 0.2) cur = now + 0.03;
+  var a = SND.acc + teeth, n = Math.floor(a);
+  if (n && c.state === 'running') {
+    for (var k = 1; k <= Math.min(n, 32); k++) {        // a frame is at most 50 ms: about 30 clicks at full speed
+      var b = c.createBufferSource();
+      b.buffer = SND.buf.click[SND.tooth++ % DRAG_TEETH];
+      b.connect(SND.clickBus); b.start(cur + (k - SND.acc) / teeth * dt);
+    }
+    SND.count += Math.min(n, 32);
+  }
+  SND.acc = a - n; V.next = cur + dt;
+}
+function stopDrag(now) {
+  var V = SND.drag; if (!V) return;
+  SND.drag = null; SND.acc = 0;
+  try {
+    var t = SND.ctx.currentTime;
+    V.hiss.gain.cancelScheduledValues(t);
+    if (now) { V.hiss.gain.value = 0; V.src.stop(); }
+    else { V.hiss.gain.setTargetAtTime(0, t, 0.05); V.src.stop(t + 0.4); }
   } catch (e) {}
+}
+function setSound(on) {
+  SND.on = on;
+  try { localStorage.setItem('reel-sound', on ? 'on' : 'off'); } catch (e) {}
+  document.getElementById('btn-sound').setAttribute('aria-pressed', String(on));
+  var b = detail.querySelector('[data-dg="sound"]'); if (b) b.setAttribute('aria-pressed', String(on));
+  if (on) soundCtx();
+  else { stopDrag(true); if (SND.ctx) { try { SND.ctx.suspend(); } catch (e) {} } }
+}
+document.getElementById('btn-sound').setAttribute('aria-pressed', String(SND.on));
+document.getElementById('btn-sound').addEventListener('click', function () { setSound(!SND.on); });
+// Browsers only start audio from a press or a key, so open it on the first one
+['pointerdown', 'keydown', 'touchend'].forEach(function (ev) {
+  window.addEventListener(ev, function () { if (SND.on && !SND.ctx) soundCtx(); }, true);
+});
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden && SND.ctx) { stopDrag(true); try { SND.ctx.suspend(); } catch (e) {} }
+});
+function soundIdle(now) {          // let the audio hardware sleep when nothing has played for a while
+  if (SND.ctx && !SND.drag && SND.ctx.state === 'running' && now - SND.idle > 5000) {
+    SND.idle = now; try { SND.ctx.suspend(); } catch (e) {}
+  }
 }
 
 // Chart: the fish's pull over the run, the drag setting as a threshold, and a wash where the spool slips
@@ -1930,12 +2035,13 @@ var last = performance.now();
 function frame(now) {
   var dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (state.spin && !crank && isAssembled()) advance(dt * Math.PI * 2 * state.speed);
-  if (DRAG.run) dragStep(dt);
+  if (DRAG.run) dragStep(dt); else if (SND.drag) stopDrag();
   if (state.demo && (DRAG.run || DRAG.v) && now - DRAG.lastDraw > 33) { DRAG.lastDraw = now; updateDragReadouts(); drawDragChart(); }
   var slackTo = state.bail > 0.5 ? 1 : 0;
   if (state.slack !== slackTo) state.slack = reduceMotion ? slackTo : Math.max(0, Math.min(1, state.slack + Math.sign(slackTo - state.slack) * dt / (slackTo ? 0.9 : 0.25)));
   if (state.bail !== state.bailTarget) {
     state.bail = reduceMotion ? state.bailTarget : Math.max(0, Math.min(1, state.bail + Math.sign(state.bailTarget - state.bail) * dt / 0.35));
+    if (state.bail === state.bailTarget) bailSound(state.bailTarget === 1);
     var eb = state.bail * state.bail * (3 - 2 * state.bail);
     bailPivot.rotation.y = eb * BAIL_OPEN; root.updateMatrixWorld(true);
   }
@@ -1951,14 +2057,14 @@ function frame(now) {
   cur.r += (goal.r - cur.r) * k; cur.theta += (goal.theta - cur.theta) * k; cur.phi += (goal.phi - cur.phi) * k;
   applyCamera();
   renderer.render(scene, camera);
-  updatePins(); updateScale();
+  updatePins(); updateScale(); soundIdle(now);
   requestAnimationFrame(frame);
 }
 
 pose(); applyDrag(); applyExplode(); renderDetail(); syncPins(); paint();
 resize(); goHome(true); applyCamera();
 requestAnimationFrame(frame);
-window.__reel = { select: select, state: state, setXray: setXray, snap: snap, pose: pose, parts: P, three: T, setStrip: setStrip, setBail: setBail, advance: advance, LINE: LINE, bailPivot: bailPivot, root: root, updateLine: updateLine, pieces: pieces, camera: camera, lineGroup: lineGroup, DRAG: DRAG, dragStep: dragStep, setDemo: setDemo, applyDrag: applyDrag, startRun: startRun,
+window.__reel = { select: select, state: state, setXray: setXray, snap: snap, pose: pose, parts: P, three: T, setStrip: setStrip, setBail: setBail, advance: advance, LINE: LINE, bailPivot: bailPivot, root: root, updateLine: updateLine, pieces: pieces, camera: camera, lineGroup: lineGroup, DRAG: DRAG, dragStep: dragStep, setDemo: setDemo, applyDrag: applyDrag, startRun: startRun, SND: SND, setSound: setSound, makeSounds: makeSounds, dragMix: dragMix,
   view: function (th, ph, rr, at) { goal.theta = th; goal.phi = ph; if (rr) goal.r = rr; if (at) goal.target.fromArray(at); snap(); applyCamera(); } };
 })();
 </script>
